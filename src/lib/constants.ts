@@ -10,6 +10,7 @@ export const LEAD_SOURCES = [
   "walk_in",
   "referral",
   "whatsapp",
+  "bulk_import",
   "other",
 ] as const;
 export type LeadSource = (typeof LEAD_SOURCES)[number];
@@ -80,6 +81,7 @@ export const LABELS: Record<string, string> = {
   walk_in: "Walk-in",
   referral: "Referral",
   whatsapp: "WhatsApp",
+  bulk_import: "Bulk Import",
   other: "Other",
   ems: "EMS",
   pilates: "Pilates",
@@ -124,6 +126,7 @@ export const LABELS_AR: Record<string, string> = {
   walk_in: "زيارة مباشرة",
   referral: "إحالة",
   whatsapp: "واتساب",
+  bulk_import: "استيراد جماعي",
   other: "أخرى",
   ems: "EMS",
   pilates: "بيلاتس",

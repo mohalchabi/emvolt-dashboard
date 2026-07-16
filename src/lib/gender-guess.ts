@@ -46,6 +46,13 @@ const MALE_NAMES = new Set([
   "ehsan", "jehad", "hani", "michael", "harry", "alan", "allan",
   "arsalan", "abhijit", "aarav", "araav", "bhavesh", "fadel",
   "dhafer", "bakr",
+  // Additional common misspellings/transliteration variants tuned against a
+  // 10k-row bulk contact import.
+  "mohmmad", "mohmmed", "mohmed", "mohamd", "amjad", "omer", "abdullaziz",
+  "soud", "ebrahem", "ebrahim", "ibrahem", "muhmmid", "awad", "abdulazez",
+  "salem", "othman", "abdulallah", "abduallh", "kaled", "suliman",
+  "abdulrhman", "abdulmajed", "waled", "turky", "turke", "hamdan",
+  "yazed", "mashal",
 ], );
 
 const FEMALE_NAMES = new Set([
@@ -81,6 +88,39 @@ const FEMALE_NAMES = new Set([
   "rana", "rania", "raghad", "areej", "arij", "asma", "asmaa", "bushra",
   "eman", "ghina", "haifa", "hayfa", "jihan", "juhaina", "layan",
   "lian", "mai", "may", "nesreen", "nesrine", "rakan", "mounira",
+  // Additional common misspellings/transliteration variants tuned against a
+  // 10k-row bulk contact import.
+  "fatmah", "arwa", "hend", "monerah", "aljawhara", "monera", "modi",
+  "latefa", "nourh", "faten", "afaf", "ebtesam", "gadah", "noof", "fahda",
+  "ashwaq", "lamya", "lolwa", "basmah", "afnan", "moudi", "fawzya",
+  "alanood", "hesah", "ahlam", "elham", "reham", "areeg", "ghadah",
+  "abrar", "amera", "hajer", "ohoud", "awatef", "kholod", "khawla",
+  "aseel", "mshael", "seham", "hoda", "ohud", "heba", "nuof", "fawzia",
+  "salha", "nahla", "tagreed", "mouneera", "albandari", "latefah",
+  "munera", "azizah", "khulod", "demah", "aziza", "sultana", "alya",
+  "fawzyah", "ibtesam", "nadya", "samah", "dema", "nadaa", "amnah",
+  "shaden", "madawi", "norah", "masheal", "fayza", "gada", "basma",
+  "dena", "kholud", "samyah", "leena", "manar", "lena", "hadel",
+  "meznah", "lolwah", "hanady", "jwaher", "badryah", "badria", "sawsan",
+  "sultanah", "shekha", "sabah", "nahed", "koloud", "hajar", "nesren",
+  "wegdan", "zenab", "rabab", "randa", "lolo", "shoroq", "amaal",
+  "tahany", "samerah", "alhanuf", "ebtehal", "bodoor", "afrah", "maya",
+  "jamela", "roba", "aljohara", "mashail", "fawziah", "khawlah", "tarfa",
+  "alia", "danya", "badrya", "munerah", "amerah", "adwa", "walaa",
+  "bodor", "amane", "arej", "hassa", "sherefa", "setah", "shekhah",
+  "rahma", "bayan", "ranya", "aljazi", "helah", "aljouhara", "ranem",
+  "lulu", "nurah", "haila", "jehan", "shoaa", "albanderi", "yasmen",
+  "hayfaa", "nura", "muneerah", "folwa", "sharefa", "ashjan", "adwaa",
+  "atheer", "najwa", "hesa", "mohra", "soad", "refah", "bshayer",
+  "albandry", "fahdah", "tahane", "nadyah", "alanod", "badreah",
+  "faredah", "khloud", "haneen", "taghred", "seetah", "somaya", "shekah",
+  "albandri", "marem", "samera", "fatemah", "batool", "hayla",
+  "entesar", "mouna", "bedour", "fawziya", "somaiah", "modaa", "mezna",
+  "ghader", "hetaf", "aljawhra", "ebtsam", "majedah", "moshael",
+  "sheikah", "sameerah", "thoraya", "alhanof", "nuorah", "mayson",
+  "olaa", "madawe", "amenah", "koulod", "badrea", "seba", "mervat",
+  "monirah", "shahed", "arwah", "ebtisam", "alhanoof", "hawazen",
+  "gawher", "renad", "tagred", "doaa", "mounerah", "lana",
 ], );
 
 export type GuessedGender = "male" | "female" | "unknown";
