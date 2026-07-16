@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 
-const PUBLIC_PATHS = ["/dev-login", "/login", "/api/auth", "/api/webhooks"];
+// /api/inbody does its own dual auth check (staff session OR client session
+// owning the result) rather than the staff-only check below — see
+// src/app/api/inbody/[id]/route.ts.
+const PUBLIC_PATHS = ["/dev-login", "/login", "/api/auth", "/api/webhooks", "/api/inbody"];
+
+// The customer portal is a separate app with its own auth (phone + OTP,
+// checked via requireClientSession() in src/app/portal/(app)/layout.tsx) —
+// it must never be gated by the staff-only NextAuth check below.
+const PORTAL_PREFIX = "/portal";
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
-  if (isPublic || req.auth) return NextResponse.next();
+  if (isPublic || pathname.startsWith(PORTAL_PREFIX) || req.auth) return NextResponse.next();
 
   const signInPath = process.env.NODE_ENV === "development" ? "/dev-login" : "/login";
   const url = req.nextUrl.clone();
