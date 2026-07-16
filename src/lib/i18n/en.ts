@@ -104,6 +104,11 @@ export const en = {
     matchingPlural: "leads matching current filters.",
     newLead: "New Lead",
     noLeadsMatch: "No leads match these filters.",
+    pageOf: "Page",
+    of: "of",
+    previous: "Previous",
+    next: "Next",
+    genderScanCapNote: "estimated gender filter only scans the most recent 2,000 leads",
   },
   leadsList: {
     selected: "selected",

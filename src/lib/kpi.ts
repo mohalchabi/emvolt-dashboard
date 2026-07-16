@@ -44,10 +44,17 @@ export async function getLostReasonBreakdown() {
 }
 
 export async function getStaffLeaderboard() {
-  const leads = await prisma.lead.findMany({
+  // Aggregate at the database level instead of pulling every assigned lead
+  // into memory — this stays fast regardless of how many leads exist.
+  const byStatus = await prisma.lead.groupBy({
+    by: ["assignedStaffId", "status"],
     where: { assignedStaffId: { not: null } },
-    include: { assignedStaff: true },
+    _count: { _all: true },
   });
+
+  const staffIds = Array.from(new Set(byStatus.map((r) => r.assignedStaffId!)));
+  const staffRows = await prisma.staff.findMany({ where: { id: { in: staffIds } } });
+  const staffById = new Map(staffRows.map((s) => [s.id, s]));
 
   const byStaff = new Map<
     string,
@@ -61,22 +68,24 @@ export async function getStaffLeaderboard() {
       converted: number;
     }
   >();
-  for (const lead of leads) {
-    if (!lead.assignedStaff) continue;
-    const key = lead.assignedStaffId!;
+  for (const row of byStatus) {
+    const key = row.assignedStaffId!;
+    const staff = staffById.get(key);
+    if (!staff) continue;
     const entry = byStaff.get(key) ?? {
       staffId: key,
-      name: lead.assignedStaff.name,
-      target: lead.assignedStaff.leadTarget,
+      name: staff.name,
+      target: staff.leadTarget,
       total: 0,
       contacted: 0,
       notContacted: 0,
       converted: 0,
     };
-    entry.total += 1;
-    if (lead.status === "new") entry.notContacted += 1;
-    else entry.contacted += 1;
-    if (lead.status === "converted") entry.converted += 1;
+    const count = row._count._all;
+    entry.total += count;
+    if (row.status === "new") entry.notContacted += count;
+    else entry.contacted += count;
+    if (row.status === "converted") entry.converted += count;
     byStaff.set(key, entry);
   }
 
@@ -86,9 +95,14 @@ export async function getStaffLeaderboard() {
 }
 
 export async function getFirstContactStats() {
+  // Bounded to a recent window + a hard cap so this stays fast as lead volume
+  // grows — an "all-time" average isn't a meaningful KPI anyway once the
+  // history spans years.
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 3_600_000);
   const contactedLeads = await prisma.lead.findMany({
-    where: { status: { not: "new" } },
+    where: { status: { not: "new" }, createdAt: { gte: ninetyDaysAgo } },
     include: { activityLogs: { orderBy: { createdAt: "asc" } } },
+    take: 500,
   });
 
   const diffsHours: number[] = [];

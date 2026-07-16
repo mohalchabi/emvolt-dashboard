@@ -106,6 +106,11 @@ export const ar: Dictionary = {
     matchingPlural: "عملاء محتملون يطابقون الفلاتر الحالية.",
     newLead: "عميل محتمل جديد",
     noLeadsMatch: "لا يوجد عملاء محتملون مطابقون لهذه الفلاتر.",
+    pageOf: "صفحة",
+    of: "من",
+    previous: "السابق",
+    next: "التالي",
+    genderScanCapNote: "فلتر الجنس التقديري يفحص آخر 2000 عميل محتمل فقط",
   },
   leadsList: {
     selected: "محدد",
