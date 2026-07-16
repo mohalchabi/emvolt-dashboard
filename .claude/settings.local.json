@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma *)",
+      "Bash(timeout 8 bash -c \"cat < /dev/null > /dev/tcp/ep-rough-violet-azq76636-pooler.c-3.ap-southeast-1.aws.neon.tech/5432\")",
+      "Bash(node -e ' *)",
+      "Bash(npx tsx *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 5 http://localhost:3010/leads)",
+      "Bash(curl -s --max-time 5 http://localhost:3010/)",
+      "Bash(npx tsc *)"
+    ]
+  }
+}

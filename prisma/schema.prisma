@@ -1,0 +1,179 @@
+// EmVolt internal dashboard data model.
+// Deliberately no Prisma `enum`s (kept from when local dev ran on SQLite,
+// which doesn't support them). Status/role/section/type fields are plain
+// String columns, validated against shared TS unions in
+// src/lib/constants.ts.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Staff {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  role       String // admin | trainer | front_desk
+  section    String? // male | female | null (both/admin/front-desk)
+  active     Boolean  @default(true)
+  avatarUrl  String?
+  leadTarget Int? // admin-set target # of leads to work through (e.g. weekly); null = not set
+  createdAt  DateTime @default(now())
+
+  assignedLeads    Lead[]                @relation("LeadAssignedStaff")
+  assignedClients  Client[]              @relation("ClientAssignedTrainer")
+  sessions         Session[]             @relation("SessionTrainer")
+  recurringSlots   RecurringSlot[]       @relation("RecurringSlotTrainer")
+  activityLogs     ActivityLog[]         @relation("ActivityLogAuthor")
+  contactAttempts  LeadContactAttempt[]  @relation("ContactAttemptStaff")
+}
+
+model Lead {
+  id               String   @id @default(cuid())
+  name             String
+  phone            String
+  source           String // cal_com | instagram | walk_in | referral | whatsapp | other
+  interestedIn     String // ems | pilates | pt
+  section          String? // male | female | null = not yet known, needs review before converting
+  status           String   @default("new") // new | contacted | trial_scheduled | trial_completed | converted | lost
+  lostReason       String? // price | location | schedule | competitor | no_response | not_interested | medical | other
+  calcomBookingUid String?  @unique
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  assignedStaffId String?
+  assignedStaff   Staff? @relation("LeadAssignedStaff", fields: [assignedStaffId], references: [id])
+
+  convertedClient Client?
+  sessions        Session[]            @relation("SessionLead")
+  activityLogs    ActivityLog[]        @relation("ActivityLogLead")
+  contactAttempts LeadContactAttempt[] @relation("ContactAttemptLead")
+
+  @@index([status])
+  @@index([assignedStaffId])
+}
+
+// One row per contact attempt a staff member logs against a lead — how they
+// reached out and what happened. Booking a trial here also creates the
+// matching Session so it shows up on the calendar immediately.
+model LeadContactAttempt {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation("ContactAttemptLead", fields: [leadId], references: [id])
+  staffId   String
+  staff     Staff    @relation("ContactAttemptStaff", fields: [staffId], references: [id])
+  method    String // whatsapp | sms | call
+  outcome   String // no_answer | interested_later | not_interested | booked_trial
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+  @@index([staffId])
+}
+
+model Client {
+  id       String  @id @default(cuid())
+  name     String
+  phone    String
+  email    String?
+  section  String // male | female
+  status   String  @default("active") // active | paused | churned
+  createdAt DateTime @default(now())
+
+  convertedFromLeadId String? @unique
+  convertedFromLead   Lead?   @relation(fields: [convertedFromLeadId], references: [id])
+
+  assignedTrainerId String?
+  assignedTrainer   Staff? @relation("ClientAssignedTrainer", fields: [assignedTrainerId], references: [id])
+
+  packages       Package[]
+  sessions       Session[]       @relation("SessionClient")
+  recurringSlots RecurringSlot[] @relation("RecurringSlotClient")
+  activityLogs   ActivityLog[]   @relation("ActivityLogClient")
+
+  @@index([status])
+  @@index([assignedTrainerId])
+}
+
+model Package {
+  id            String    @id @default(cuid())
+  clientId      String
+  client        Client    @relation(fields: [clientId], references: [id])
+  name          String
+  totalSessions Int
+  price         Float
+  purchaseDate  DateTime  @default(now())
+  expiryDate    DateTime?
+
+  sessions Session[]
+
+  @@index([clientId])
+}
+
+// Polymorphic booking: covers trials (linked to a Lead) and real client
+// sessions (linked to a Client), so one calendar shows everything a trainer
+// is committed to. Exactly one of leadId/clientId is set.
+model Session {
+  id        String   @id @default(cuid())
+  trainerId String
+  trainer   Staff    @relation("SessionTrainer", fields: [trainerId], references: [id])
+  type      String // trial | ems | pilates | pt
+  datetime  DateTime
+  duration  Int      @default(20) // minutes
+  status    String   @default("scheduled") // scheduled | completed | cancelled | no_show
+
+  leadId String?
+  lead   Lead?   @relation("SessionLead", fields: [leadId], references: [id])
+
+  clientId String?
+  client   Client? @relation("SessionClient", fields: [clientId], references: [id])
+
+  packageId String?
+  package   Package? @relation(fields: [packageId], references: [id])
+
+  recurringSlotId String?
+  recurringSlot   RecurringSlot? @relation(fields: [recurringSlotId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([trainerId, datetime])
+  @@index([clientId])
+  @@index([leadId])
+}
+
+// A standing weekly booking a script expands into concrete Session rows.
+model RecurringSlot {
+  id        String  @id @default(cuid())
+  clientId  String
+  client    Client  @relation("RecurringSlotClient", fields: [clientId], references: [id])
+  trainerId String
+  trainer   Staff   @relation("RecurringSlotTrainer", fields: [trainerId], references: [id])
+  dayOfWeek Int // 0=Sunday .. 6=Saturday
+  time      String // "HH:mm" 24h
+  duration  Int     @default(20)
+  type      String // ems | pilates | pt
+  active    Boolean @default(true)
+
+  sessions Session[]
+}
+
+// Shared history on a Lead or Client so staff aren't asking each other what
+// happened. Exactly one of leadId/clientId is set.
+model ActivityLog {
+  id        String   @id @default(cuid())
+  leadId    String?
+  lead      Lead?    @relation("ActivityLogLead", fields: [leadId], references: [id])
+  clientId  String?
+  client    Client?  @relation("ActivityLogClient", fields: [clientId], references: [id])
+  authorId  String
+  author    Staff    @relation("ActivityLogAuthor", fields: [authorId], references: [id])
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+  @@index([clientId])
+}
