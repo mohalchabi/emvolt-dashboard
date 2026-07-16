@@ -1,5 +1,6 @@
 import { NewPackageDialog } from "@/components/clients/new-package-dialog";
 import { packageBalances } from "@/lib/package-balance";
+import { prisma } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { Package } from "@/generated/prisma/client";
@@ -11,13 +12,16 @@ export async function PackagesPanel({
   clientId: string;
   packages: Package[];
 }) {
-  const balances = await packageBalances(packages);
+  const [balances, templates] = await Promise.all([
+    packageBalances(packages),
+    prisma.packageTemplate.findMany({ where: { active: true }, orderBy: [{ name: "asc" }, { sessions: "asc" }] }),
+  ]);
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Packages</CardTitle>
-        <NewPackageDialog clientId={clientId} />
+        <NewPackageDialog clientId={clientId} templates={templates} />
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {packages.length === 0 && (
@@ -47,6 +51,9 @@ export async function PackagesPanel({
                 Purchased {pkg.purchaseDate.toLocaleDateString()}
                 {pkg.expiryDate ? ` · Expires ${pkg.expiryDate.toLocaleDateString()}` : ""}
               </div>
+              {pkg.priceOverrideReason && (
+                <div className="text-xs text-amber-400">Price override: {pkg.priceOverrideReason}</div>
+              )}
             </div>
           );
         })}

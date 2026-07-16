@@ -23,6 +23,7 @@ export const en = {
     myClients: "My Clients",
     calendar: "Calendar",
     staff: "Staff",
+    packageTypes: "Package Types",
   },
   devLogin: {
     subtitle: "Dashboard — Dev Login",

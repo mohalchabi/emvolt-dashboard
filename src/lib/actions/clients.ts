@@ -98,21 +98,41 @@ export async function createPackage(input: CreatePackageInput) {
   const session = await requireSession();
   const data = createPackageSchema.parse(input);
 
+  const template = data.templateId
+    ? await prisma.packageTemplate.findUnique({ where: { id: data.templateId } })
+    : null;
+
+  if (template && template.price !== data.price && !data.priceOverrideReason?.trim()) {
+    throw new Error("A reason is required when the price differs from the package type's listed price.");
+  }
+
+  const purchaseDate = new Date();
+  const expiryDate = data.expiryDate
+    ? new Date(data.expiryDate)
+    : template
+      ? new Date(purchaseDate.getTime() + template.durationDays * 24 * 60 * 60 * 1000)
+      : null;
+
   const pkg = await prisma.package.create({
     data: {
       clientId: data.clientId,
+      templateId: template?.id ?? null,
       name: data.name,
       totalSessions: data.totalSessions,
       price: data.price,
-      expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
+      priceOverrideReason: template && template.price !== data.price ? data.priceOverrideReason?.trim() : null,
+      purchaseDate,
+      expiryDate,
     },
   });
 
+  const priceNote =
+    pkg.priceOverrideReason ? ` at ${pkg.price} SAR (${pkg.priceOverrideReason})` : "";
   await prisma.activityLog.create({
     data: {
       clientId: data.clientId,
       authorId: session.user.id,
-      text: `Purchased ${data.name} (${data.totalSessions} sessions).`,
+      text: `Purchased ${data.name} (${data.totalSessions} sessions)${priceNote}.`,
     },
   });
 

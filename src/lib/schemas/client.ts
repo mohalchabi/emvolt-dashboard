@@ -22,9 +22,13 @@ export const assignTrainerSchema = z.object({
 
 export const createPackageSchema = z.object({
   clientId: z.string(),
+  templateId: z.string().optional().nullable(),
   name: z.string().min(2, "Package name is required"),
   totalSessions: z.coerce.number().int().min(1, "Must be at least 1 session"),
   price: z.coerce.number().min(0, "Price can't be negative"),
+  // Required by the createPackage action (not enforced here) whenever price
+  // differs from the selected template's listed price.
+  priceOverrideReason: z.string().optional().nullable(),
   expiryDate: z.string().optional().nullable(),
 });
 export type CreatePackageInput = z.infer<typeof createPackageSchema>;

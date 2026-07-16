@@ -1,7 +1,15 @@
 import type { StaffRole } from "@/lib/constants";
 import type { Dictionary } from "@/lib/i18n";
 
-export type NavKey = "dashboard" | "leads" | "myLeads" | "clients" | "myClients" | "calendar" | "staff";
+export type NavKey =
+  | "dashboard"
+  | "leads"
+  | "myLeads"
+  | "clients"
+  | "myClients"
+  | "calendar"
+  | "staff"
+  | "packageTypes";
 
 export type NavItem = {
   href: string;
@@ -19,6 +27,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/my-clients", labelKey: "myClients", roles: ["trainer"] },
   { href: "/calendar", labelKey: "calendar", roles: ["admin", "front_desk", "trainer"] },
   { href: "/staff", labelKey: "staff", roles: ["admin"] },
+  { href: "/package-types", labelKey: "packageTypes", roles: ["admin"] },
 ];
 
 export function navForRole(role: StaffRole): NavItem[] {

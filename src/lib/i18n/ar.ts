@@ -25,6 +25,7 @@ export const ar: Dictionary = {
     myClients: "عملائي",
     calendar: "التقويم",
     staff: "الموظفون",
+    packageTypes: "أنواع الباقات",
   },
   devLogin: {
     subtitle: "لوحة التحكم — دخول تجريبي",

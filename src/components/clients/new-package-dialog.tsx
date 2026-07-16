@@ -25,28 +25,73 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createPackageSchema, type CreatePackageInput } from "@/lib/schemas/client";
 import { createPackage } from "@/lib/actions/clients";
+import type { PackageTemplate } from "@/generated/prisma/client";
 
-export function NewPackageDialog({ clientId }: { clientId: string }) {
+const CUSTOM = "custom";
+
+export function NewPackageDialog({
+  clientId,
+  templates,
+}: {
+  clientId: string;
+  templates: PackageTemplate[];
+}) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [templateChoice, setTemplateChoice] = useState<string>(templates[0]?.id ?? CUSTOM);
   const router = useRouter();
+
+  const selectedTemplate = templates.find((t) => t.id === templateChoice) ?? null;
 
   const form = useForm<z.input<typeof createPackageSchema>, unknown, CreatePackageInput>({
     resolver: zodResolver(createPackageSchema),
-    defaultValues: { clientId, name: "", totalSessions: 12, price: 0, expiryDate: null },
+    defaultValues: {
+      clientId,
+      templateId: selectedTemplate?.id ?? null,
+      name: selectedTemplate?.name ?? "",
+      totalSessions: selectedTemplate?.sessions ?? 12,
+      price: selectedTemplate?.price ?? 0,
+      priceOverrideReason: "",
+      expiryDate: null,
+    },
   });
+
+  const watchedPrice = form.watch("price");
+  const priceDiffersFromTemplate =
+    !!selectedTemplate && Number(watchedPrice) !== selectedTemplate.price;
+
+  function onTemplateChange(value: string) {
+    setTemplateChoice(value);
+    const t = templates.find((x) => x.id === value) ?? null;
+    form.reset({
+      clientId,
+      templateId: t?.id ?? null,
+      name: t?.name ?? "",
+      totalSessions: t?.sessions ?? 12,
+      price: t?.price ?? 0,
+      priceOverrideReason: "",
+      expiryDate: null,
+    });
+  }
 
   function onSubmit(values: CreatePackageInput) {
     startTransition(async () => {
       try {
-        await createPackage(values);
+        await createPackage({ ...values, clientId });
         setOpen(false);
-        form.reset({ clientId, name: "", totalSessions: 12, price: 0, expiryDate: null });
+        onTemplateChange(templates[0]?.id ?? CUSTOM);
         router.refresh();
-      } catch {
-        toast.error("Could not add package.");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Could not add package.");
       }
     });
   }
@@ -62,6 +107,34 @@ export function NewPackageDialog({ clientId }: { clientId: string }) {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            <FormItem>
+              <FormLabel>Package type</FormLabel>
+              <Select value={templateChoice} onValueChange={(v) => v && onTemplateChange(v)}>
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue>
+                      {(v: string) =>
+                        v === CUSTOM
+                          ? "Custom package"
+                          : (() => {
+                              const t = templates.find((x) => x.id === v);
+                              return t ? `${t.name} — ${t.sessions} sessions — ${t.price.toLocaleString()} SAR` : v;
+                            })()
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {templates.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name} — {t.sessions} sessions — {t.durationDays} days — {t.price.toLocaleString()} SAR
+                    </SelectItem>
+                  ))}
+                  <SelectItem value={CUSTOM}>Custom package</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+
             <FormField
               control={form.control}
               name="name"
@@ -69,7 +142,7 @@ export function NewPackageDialog({ clientId }: { clientId: string }) {
                 <FormItem>
                   <FormLabel>Package name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. 12-Session EMS Pack" {...field} />
+                    <Input placeholder="e.g. 12-Session EMS Pack" {...field} disabled={!!selectedTemplate} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -84,7 +157,7 @@ export function NewPackageDialog({ clientId }: { clientId: string }) {
                   <FormItem>
                     <FormLabel>Total sessions</FormLabel>
                     <FormControl>
-                      <Input type="number" min={1} {...field} value={field.value as number} />
+                      <Input type="number" min={1} {...field} value={field.value as number} disabled={!!selectedTemplate} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -106,22 +179,53 @@ export function NewPackageDialog({ clientId }: { clientId: string }) {
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="expiryDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Expiry date (optional)</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} value={field.value ?? ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {priceDiffersFromTemplate && (
+              <FormField
+                control={form.control}
+                name="priceOverrideReason"
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reason for price change</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Summer offer, referral discount..." {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Required — the listed price for {selectedTemplate?.name} is{" "}
+                      {selectedTemplate?.price.toLocaleString()} SAR.
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {selectedTemplate ? (
+              <p className="text-xs text-muted-foreground">
+                Sessions must be used within {selectedTemplate.durationDays} days of purchase — the
+                expiry date is set automatically.
+              </p>
+            ) : (
+              <FormField
+                control={form.control}
+                name="expiryDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Expiry date (optional)</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <DialogFooter>
-              <Button type="submit" disabled={isPending}>
+              <Button
+                type="submit"
+                disabled={isPending || (priceDiffersFromTemplate && !form.watch("priceOverrideReason")?.trim())}
+              >
                 {isPending ? "Adding..." : "Add Package"}
               </Button>
             </DialogFooter>

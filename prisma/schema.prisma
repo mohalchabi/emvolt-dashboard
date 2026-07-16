@@ -30,6 +30,7 @@ model Staff {
   recurringSlots   RecurringSlot[]       @relation("RecurringSlotTrainer")
   activityLogs     ActivityLog[]         @relation("ActivityLogAuthor")
   contactAttempts  LeadContactAttempt[]  @relation("ContactAttemptStaff")
+  inBodyResults    InBodyResult[]        @relation("InBodyResultUploadedBy")
 }
 
 model Lead {
@@ -94,22 +95,59 @@ model Client {
   sessions       Session[]       @relation("SessionClient")
   recurringSlots RecurringSlot[] @relation("RecurringSlotClient")
   activityLogs   ActivityLog[]   @relation("ActivityLogClient")
+  inBodyResults  InBodyResult[]  @relation("InBodyResultClient")
 
   @@index([status])
   @@index([assignedTrainerId])
+}
+
+// Admin-editable catalog of sellable package tiers (e.g. Standard/Platinum at
+// a given session count), so pricing and offers can change without a deploy.
+// Packages can still be created without a template for one-off/custom deals.
+model PackageTemplate {
+  id           String   @id @default(cuid())
+  name         String // e.g. "Standard", "Platinum", "Pilates - Women"
+  sessions     Int
+  durationDays Int // how many days a client has to use the sessions
+  price        Float
+  active       Boolean  @default(true) // inactive templates stay for history but drop out of the picker
+  createdAt    DateTime @default(now())
+
+  packages Package[]
 }
 
 model Package {
   id            String    @id @default(cuid())
   clientId      String
   client        Client    @relation(fields: [clientId], references: [id])
+  templateId    String?
+  template      PackageTemplate? @relation(fields: [templateId], references: [id])
   name          String
   totalSessions Int
   price         Float
+  // Required whenever the charged price differs from the template's listed
+  // price (an offer/discount) — keeps every non-standard sale explainable.
+  priceOverrideReason String?
   purchaseDate  DateTime  @default(now())
   expiryDate    DateTime?
 
   sessions Session[]
+
+  @@index([clientId])
+}
+
+// One row per InBody body-composition scan a client has taken, so trainers
+// can track progress over time rather than just seeing the latest result.
+model InBodyResult {
+  id           String   @id @default(cuid())
+  clientId     String
+  client       Client   @relation("InBodyResultClient", fields: [clientId], references: [id])
+  fileUrl      String
+  fileName     String
+  takenAt      DateTime // date of the actual scan, may differ from upload time
+  uploadedById String
+  uploadedBy   Staff    @relation("InBodyResultUploadedBy", fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
 
   @@index([clientId])
 }
