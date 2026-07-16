@@ -34,6 +34,7 @@ export const en = {
     title: "Staff sign in",
     desc: "Access is restricted to approved EmVolt staff emails.",
     button: "Sign in with Google",
+    accessDenied: "Sign-in failed — you don't have an authorized account yet. Please contact the admin at",
   },
   dashboardAdmin: {
     title: "Dashboard",
