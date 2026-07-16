@@ -249,7 +249,7 @@ export function LeadDetailPanel({ lead, staff, logs, canManage, t, common, local
 
           <div className="flex flex-col gap-3">
             {logs.map((log) => (
-              <div key={log.id} className="border-l-2 border-border pl-3 text-sm">
+              <div key={log.id} className="border-s-2 border-border ps-3 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <span className="font-medium text-foreground">{log.author.name}</span>
                   <span>{log.createdAt.toLocaleString()}</span>

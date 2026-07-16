@@ -45,7 +45,7 @@ export default async function LeadDetailPage({
     <div className="flex flex-col gap-6">
       <div>
         <Link href={backHref} className="text-sm text-muted-foreground hover:underline">
-          &larr; {canManage ? t.leadDetail.backToLeads : t.leadDetail.backToMyLeads}
+          {locale === "ar" ? "→" : "←"} {canManage ? t.leadDetail.backToLeads : t.leadDetail.backToMyLeads}
         </Link>
         <div className="mt-1 flex items-center gap-3">
           <h1 className="font-heading text-2xl font-semibold tracking-tight">{lead.name}</h1>
