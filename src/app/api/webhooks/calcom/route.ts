@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/db";
+import { getSystemAuthorId } from "@/lib/system-author";
 
 // cal.com signs the raw request body with HMAC-SHA256 using the webhook
 // secret configured on the event type / webhook subscription.
@@ -22,14 +23,6 @@ function inferSection(title: string | undefined): "male" | "female" | null {
   if (t.includes("female") || t.includes("women")) return "female";
   if (t.includes("male") || t.includes("men")) return "male";
   return null;
-}
-
-// Automated activity-log entries need a Staff author; attribute them to the
-// first active admin rather than adding a nullable/"system" author column.
-async function getSystemAuthorId() {
-  const admin = await prisma.staff.findFirst({ where: { role: "admin", active: true } });
-  if (!admin) throw new Error("No active admin found to attribute webhook activity to.");
-  return admin.id;
 }
 
 type CalcomPayload = {

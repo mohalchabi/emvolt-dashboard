@@ -31,6 +31,7 @@ model Staff {
   activityLogs     ActivityLog[]         @relation("ActivityLogAuthor")
   contactAttempts  LeadContactAttempt[]  @relation("ContactAttemptStaff")
   inBodyResults    InBodyResult[]        @relation("InBodyResultUploadedBy")
+  messages         Message[]             @relation("MessageAuthorStaff")
 }
 
 model Lead {
@@ -97,9 +98,26 @@ model Client {
   recurringSlots RecurringSlot[] @relation("RecurringSlotClient")
   activityLogs   ActivityLog[]   @relation("ActivityLogClient")
   inBodyResults  InBodyResult[]  @relation("InBodyResultClient")
+  messages       Message[]       @relation("MessageClient")
 
   @@index([status])
   @@index([assignedTrainerId])
+}
+
+// Short-lived one-time codes for the customer portal's phone-based login.
+// Keyed by phone (not clientId) since a phone lookup can match more than one
+// Client record (phone isn't unique — see Client.phone) and login resolves
+// that after the code is verified, not before.
+model ClientOtp {
+  id         String    @id @default(cuid())
+  phone      String
+  codeHash   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone])
 }
 
 // Admin-editable catalog of sellable package tiers (e.g. Standard/Platinum at
@@ -131,6 +149,9 @@ model Package {
   priceOverrideReason String?
   purchaseDate  DateTime  @default(now())
   expiryDate    DateTime?
+  // Set when the client taps "Request Renewal" in the portal; cleared when
+  // staff sells them a new package. Null = no open request.
+  renewalRequestedAt DateTime?
 
   sessions Session[]
 
@@ -214,5 +235,23 @@ model ActivityLog {
   createdAt DateTime @default(now())
 
   @@index([leadId])
+  @@index([clientId])
+}
+
+// Simple refresh-based thread between a client and their trainer, scoped by
+// clientId only — deliberately not pinned to a specific trainer per-message,
+// so if a client's assigned trainer changes, staff-side visibility still
+// naturally follows Client.assignedTrainerId rather than going stale.
+model Message {
+  id             String    @id @default(cuid())
+  clientId       String
+  client         Client    @relation("MessageClient", fields: [clientId], references: [id])
+  authorIsClient Boolean
+  authorStaffId  String?
+  authorStaff    Staff?    @relation("MessageAuthorStaff", fields: [authorStaffId], references: [id])
+  text           String
+  createdAt      DateTime  @default(now())
+  readAt         DateTime?
+
   @@index([clientId])
 }
