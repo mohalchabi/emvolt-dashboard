@@ -68,14 +68,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async jwt({ token, user }) {
       const t = token as AppJWT;
-      if (user?.email) {
-        const staff = await prisma.staff.findUnique({ where: { email: user.email } });
-        if (staff) {
-          t.staffId = staff.id;
-          t.role = staff.role as StaffRole;
-          t.section = (staff.section as Section | null) ?? null;
-          t.name = staff.name;
-        }
+      const email = user?.email ?? token.email;
+      // Re-checked on every request (not just at sign-in) so a role change
+      // or deactivation in Staff takes effect on the person's next page
+      // load instead of requiring them to sign out and back in.
+      if (email) {
+        const staff = await prisma.staff.findUnique({ where: { email } });
+        if (!staff || !staff.active) return null; // kicks them back to sign-in
+        t.staffId = staff.id;
+        t.role = staff.role as StaffRole;
+        t.section = (staff.section as Section | null) ?? null;
+        t.name = staff.name;
       }
       return t;
     },
