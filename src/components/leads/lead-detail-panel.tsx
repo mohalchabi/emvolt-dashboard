@@ -135,13 +135,13 @@ export function LeadDetailPanel({ lead, staff, logs, canManage, t, common, local
               >
                 <SelectTrigger className={`w-full ${!lead.section ? "border-amber-500/60 text-amber-400" : ""}`}>
                   <SelectValue>
-                    {(v: string) => (v === "unset" ? t.common.needsReview : label(v, locale))}
+                    {(v: string) => (v === "unset" ? common.needsReview : label(v, locale))}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {!lead.section && (
                     <SelectItem value="unset" disabled>
-                      {t.common.needsReview}
+                      {common.needsReview}
                     </SelectItem>
                   )}
                   {SECTIONS.map((s) => (
@@ -179,11 +179,11 @@ export function LeadDetailPanel({ lead, staff, logs, canManage, t, common, local
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue>
-                      {(v: string) => (v === "none" ? t.common.unassigned : staff.find((s) => s.id === v)?.name ?? v)}
+                      {(v: string) => (v === "none" ? common.unassigned : staff.find((s) => s.id === v)?.name ?? v)}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">{t.common.unassigned}</SelectItem>
+                    <SelectItem value="none">{common.unassigned}</SelectItem>
                     {staff.map((s) => (
                       <SelectItem key={s.id} value={s.id}>
                         {s.name}
@@ -193,7 +193,7 @@ export function LeadDetailPanel({ lead, staff, logs, canManage, t, common, local
                 </Select>
               ) : (
                 <div className="flex h-9 items-center rounded-lg border px-3 text-sm text-muted-foreground">
-                  {staff.find((s) => s.id === lead.assignedStaffId)?.name ?? t.common.unassigned}
+                  {staff.find((s) => s.id === lead.assignedStaffId)?.name ?? common.unassigned}
                 </div>
               )}
             </div>

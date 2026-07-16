@@ -76,7 +76,15 @@ export default async function LeadDetailPage({
           <LogContactForm leadId={lead.id} section={lead.section} trainers={trainers} t={t.logContactForm} locale={locale} />
         </div>
         <div className="flex flex-col gap-6">
-          <LeadDetailPanel lead={lead} staff={staff} logs={logs} canManage={canManage} t={t.leadDetail} locale={locale} />
+          <LeadDetailPanel
+            lead={lead}
+            staff={staff}
+            logs={logs}
+            canManage={canManage}
+            t={t.leadDetail}
+            common={t.common}
+            locale={locale}
+          />
         </div>
       </div>
     </div>
