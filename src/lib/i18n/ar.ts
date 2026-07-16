@@ -122,6 +122,12 @@ export const ar: Dictionary = {
   leadFilters: {
     allStatuses: "كل الحالات",
     allSections: "كل الأقسام",
+    allAssigned: "كل حالات التعيين",
+    assignedOnly: "معيّن",
+    unassignedOnly: "غير معيّن",
+    allGenders: "كل الأجناس",
+    unknownGender: "غير معروف",
+    genderEstimateNote: "الجنس مقدَّر بناءً على الاسم الأول وقد لا يكون دقيقاً.",
   },
   newLeadDialog: {
     trigger: "عميل محتمل جديد",

@@ -120,6 +120,12 @@ export const en = {
   leadFilters: {
     allStatuses: "All statuses",
     allSections: "All sections",
+    allAssigned: "All assignments",
+    assignedOnly: "Assigned",
+    unassignedOnly: "Unassigned",
+    allGenders: "All genders",
+    unknownGender: "Unknown",
+    genderEstimateNote: "Gender is estimated from the lead's first name and may be inaccurate.",
   },
   newLeadDialog: {
     trigger: "New Lead",

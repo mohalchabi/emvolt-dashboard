@@ -14,18 +14,22 @@ import type { Dictionary, Locale } from "@/lib/i18n";
 export function LeadFilters({
   currentStatus,
   currentSection,
+  currentAssigned,
+  currentGender,
   t,
   locale,
 }: {
   currentStatus?: string;
   currentSection?: string;
+  currentAssigned?: string;
+  currentGender?: string;
   t: Dictionary["leadFilters"];
   locale: Locale;
 }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  function updateParam(key: "status" | "section", value: string) {
+  function updateParam(key: "status" | "section" | "assigned" | "gender", value: string) {
     const params = new URLSearchParams(window.location.search);
     if (value === "all") params.delete(key);
     else params.set(key, value);
@@ -33,38 +37,74 @@ export function LeadFilters({
   }
 
   return (
-    <div className="flex flex-wrap gap-3">
-      <Select value={currentStatus ?? "all"} onValueChange={(v) => updateParam("status", String(v))}>
-        <SelectTrigger className="w-[calc(50%-0.375rem)] sm:w-44">
-          <SelectValue placeholder={t.allStatuses}>
-            {(v: string) => (v === "all" ? t.allStatuses : label(v, locale))}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{t.allStatuses}</SelectItem>
-          {LEAD_STATUSES.map((s) => (
-            <SelectItem key={s} value={s}>
-              {label(s, locale)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap gap-3">
+        <Select value={currentStatus ?? "all"} onValueChange={(v) => updateParam("status", String(v))}>
+          <SelectTrigger className="w-[calc(50%-0.375rem)] sm:w-44">
+            <SelectValue placeholder={t.allStatuses}>
+              {(v: string) => (v === "all" ? t.allStatuses : label(v, locale))}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t.allStatuses}</SelectItem>
+            {LEAD_STATUSES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {label(s, locale)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      <Select value={currentSection ?? "all"} onValueChange={(v) => updateParam("section", String(v))}>
-        <SelectTrigger className="w-[calc(50%-0.375rem)] sm:w-40">
-          <SelectValue placeholder={t.allSections}>
-            {(v: string) => (v === "all" ? t.allSections : label(v, locale))}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{t.allSections}</SelectItem>
-          {SECTIONS.map((s) => (
-            <SelectItem key={s} value={s}>
-              {label(s, locale)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <Select value={currentSection ?? "all"} onValueChange={(v) => updateParam("section", String(v))}>
+          <SelectTrigger className="w-[calc(50%-0.375rem)] sm:w-40">
+            <SelectValue placeholder={t.allSections}>
+              {(v: string) => (v === "all" ? t.allSections : label(v, locale))}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t.allSections}</SelectItem>
+            {SECTIONS.map((s) => (
+              <SelectItem key={s} value={s}>
+                {label(s, locale)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={currentAssigned ?? "all"} onValueChange={(v) => updateParam("assigned", String(v))}>
+          <SelectTrigger className="w-[calc(50%-0.375rem)] sm:w-40">
+            <SelectValue placeholder={t.allAssigned}>
+              {(v: string) =>
+                v === "all" ? t.allAssigned : v === "assigned" ? t.assignedOnly : t.unassignedOnly
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t.allAssigned}</SelectItem>
+            <SelectItem value="assigned">{t.assignedOnly}</SelectItem>
+            <SelectItem value="unassigned">{t.unassignedOnly}</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={currentGender ?? "all"} onValueChange={(v) => updateParam("gender", String(v))}>
+          <SelectTrigger className="w-[calc(50%-0.375rem)] sm:w-40">
+            <SelectValue placeholder={t.allGenders}>
+              {(v: string) =>
+                v === "all" ? t.allGenders : v === "unknown" ? t.unknownGender : label(v, locale)
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t.allGenders}</SelectItem>
+            <SelectItem value="male">{label("male", locale)}</SelectItem>
+            <SelectItem value="female">{label("female", locale)}</SelectItem>
+            <SelectItem value="unknown">{t.unknownGender}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {currentGender && currentGender !== "all" && (
+        <p className="text-xs text-muted-foreground">{t.genderEstimateNote}</p>
+      )}
     </div>
   );
 }

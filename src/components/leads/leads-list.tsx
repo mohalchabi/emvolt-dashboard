@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { label } from "@/lib/constants";
+import { guessGender } from "@/lib/gender-guess";
 import { bulkAssignLeads } from "@/lib/actions/leads";
 import type { Lead, Staff } from "@/generated/prisma/client";
 import type { Dictionary, Locale } from "@/lib/i18n";
@@ -133,7 +134,14 @@ export function LeadsList({
             />
             <Link href={`/leads/${lead.id}`} className="flex min-w-0 flex-1 flex-col gap-1 active:opacity-70">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-medium">{lead.name}</span>
+                <span className="font-medium">
+                  {lead.name}
+                  {guessGender(lead.name) !== "unknown" && (
+                    <span className="ms-1 text-xs font-normal text-muted-foreground">
+                      ({label(guessGender(lead.name), locale)})
+                    </span>
+                  )}
+                </span>
                 <Badge variant={STATUS_VARIANT[lead.status]}>{label(lead.status, locale)}</Badge>
               </div>
               <div className="text-sm text-muted-foreground">
@@ -181,6 +189,11 @@ export function LeadsList({
                     <Link href={`/leads/${lead.id}`} className="font-medium hover:underline">
                       {lead.name}
                     </Link>
+                    {guessGender(lead.name) !== "unknown" && (
+                      <span className="ms-1 text-xs font-normal text-muted-foreground">
+                        ({label(guessGender(lead.name), locale)})
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{lead.phone}</TableCell>
                   <TableCell>{label(lead.source, locale)}</TableCell>

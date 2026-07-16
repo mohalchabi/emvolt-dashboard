@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/auth-helpers";
 import { label, LEAD_STATUSES } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
+import { guessGender } from "@/lib/gender-guess";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { NewLeadDialog } from "@/components/leads/new-lead-dialog";
@@ -20,23 +21,34 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; section?: string }>;
+  searchParams: Promise<{ status?: string; section?: string; assigned?: string; gender?: string }>;
 }) {
   await requireRole(["admin"]);
   const params = await searchParams;
   const { locale, t } = await getDictionary();
 
-  const [leads, staff] = await Promise.all([
+  const [rawLeads, staff] = await Promise.all([
     prisma.lead.findMany({
       where: {
         status: params.status || undefined,
         section: params.section || undefined,
+        assignedStaffId:
+          params.assigned === "assigned"
+            ? { not: null }
+            : params.assigned === "unassigned"
+              ? null
+              : undefined,
       },
       include: { assignedStaff: true },
       orderBy: { createdAt: "desc" },
     }),
     prisma.staff.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
   ]);
+
+  const leads =
+    params.gender && params.gender !== "all"
+      ? rawLeads.filter((lead) => guessGender(lead.name) === params.gender)
+      : rawLeads;
 
   const counts = Object.fromEntries(
     LEAD_STATUSES.map((s) => [s, leads.filter((l) => l.status === s).length])
@@ -70,7 +82,14 @@ export default async function LeadsPage({
         )}
       </div>
 
-      <LeadFilters currentStatus={params.status} currentSection={params.section} t={t.leadFilters} locale={locale} />
+      <LeadFilters
+        currentStatus={params.status}
+        currentSection={params.section}
+        currentAssigned={params.assigned}
+        currentGender={params.gender}
+        t={t.leadFilters}
+        locale={locale}
+      />
 
       {leads.length === 0 ? (
         <Card>
