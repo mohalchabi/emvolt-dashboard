@@ -111,6 +111,7 @@ export const ar: Dictionary = {
     previous: "السابق",
     next: "التالي",
     genderScanCapNote: "فلتر الجنس التقديري يفحص آخر 2000 عميل محتمل فقط",
+    exportCsv: "تصدير CSV",
   },
   leadsList: {
     selected: "محدد",

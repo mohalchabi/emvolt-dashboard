@@ -93,6 +93,16 @@ export default async function LeadsPage({
     return qs ? `/leads?${qs}` : "/leads";
   }
 
+  const exportHref = (() => {
+    const p = new URLSearchParams();
+    if (params.status) p.set("status", params.status);
+    if (params.section) p.set("section", params.section);
+    if (params.assigned) p.set("assigned", params.assigned);
+    if (params.gender) p.set("gender", params.gender);
+    const qs = p.toString();
+    return qs ? `/api/leads/export?${qs}` : "/api/leads/export";
+  })();
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -103,7 +113,12 @@ export default async function LeadsPage({
             {genderActive && totalCount >= GENDER_FILTER_SCAN_CAP ? ` (${t.leadsPage.genderScanCapNote})` : ""}
           </p>
         </div>
-        <NewLeadDialog staff={staff} t={t.newLeadDialog} locale={locale} />
+        <div className="flex gap-2">
+          <Link href={exportHref} className={cn(buttonVariants({ variant: "outline" }))}>
+            {t.leadsPage.exportCsv}
+          </Link>
+          <NewLeadDialog staff={staff} t={t.newLeadDialog} locale={locale} />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">

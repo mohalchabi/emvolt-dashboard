@@ -109,6 +109,7 @@ export const en = {
     previous: "Previous",
     next: "Next",
     genderScanCapNote: "estimated gender filter only scans the most recent 2,000 leads",
+    exportCsv: "Export CSV",
   },
   leadsList: {
     selected: "selected",
