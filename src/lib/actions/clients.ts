@@ -136,6 +136,14 @@ export async function createPackage(input: CreatePackageInput) {
     },
   });
 
+  // A new package addresses any open "please renew me" request the client
+  // made from the portal — clear it so the staff-side badge doesn't linger.
+  await prisma.package.updateMany({
+    where: { clientId: data.clientId, renewalRequestedAt: { not: null } },
+    data: { renewalRequestedAt: null },
+  });
+
   revalidatePath(`/clients/${data.clientId}`);
+  revalidatePath("/clients");
   return pkg;
 }

@@ -147,3 +147,25 @@ export async function getSlotsForClientTrainer(dateStr: string) {
   const slots = await getAvailableSlots(client.assignedTrainerId, date);
   return slots.map((s) => s.toISOString());
 }
+
+export async function requestPackageRenewal(packageId: string) {
+  const { client } = await requireClientSession();
+
+  const pkg = await prisma.package.findUnique({ where: { id: packageId } });
+  if (!pkg || pkg.clientId !== client.id) throw new Error("Could not find that package.");
+  if (pkg.renewalRequestedAt) return; // already requested — no-op, not an error
+
+  await prisma.package.update({ where: { id: pkg.id }, data: { renewalRequestedAt: new Date() } });
+
+  await prisma.activityLog.create({
+    data: {
+      clientId: client.id,
+      authorId: await getSystemAuthorId(),
+      text: `(Client) Requested a renewal for "${pkg.name}".`,
+    },
+  });
+
+  revalidatePath("/portal/packages");
+  revalidatePath(`/clients/${client.id}`);
+  revalidatePath("/clients");
+}

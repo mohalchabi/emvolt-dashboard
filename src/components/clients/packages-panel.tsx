@@ -34,9 +34,14 @@ export async function PackagesPanel({
             <div key={pkg.id} className="flex flex-col gap-2 rounded-lg border border-border p-3">
               <div className="flex items-center justify-between">
                 <span className="font-medium">{pkg.name}</span>
-                {balance.remaining <= 2 && (
-                  <Badge variant="destructive">Renewal alert</Badge>
-                )}
+                <div className="flex gap-1">
+                  {pkg.renewalRequestedAt && (
+                    <Badge variant="outline" className="border-amber-500/60 text-amber-400">
+                      Client requested renewal
+                    </Badge>
+                  )}
+                  {balance.remaining <= 2 && <Badge variant="destructive">Renewal alert</Badge>}
+                </div>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                 <div className="h-full bg-primary" style={{ width: `${pct}%` }} />

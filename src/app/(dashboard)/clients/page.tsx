@@ -55,6 +55,10 @@ export default async function ClientsPage({
     return active.reduce((sum, p) => sum + (balances.get(p.id)?.remaining ?? 0), 0);
   }
 
+  function hasRenewalRequest(clientPackages: typeof allPackages) {
+    return clientPackages.some((p) => p.renewalRequestedAt);
+  }
+
   const counts = Object.fromEntries(
     CLIENT_STATUSES.map((s) => [s, clients.filter((c) => c.status === s).length])
   );
@@ -107,7 +111,14 @@ export default async function ClientsPage({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium">{client.name}</span>
-                    <Badge variant={STATUS_VARIANT[client.status]}>{label(client.status)}</Badge>
+                    <div className="flex gap-1">
+                      {hasRenewalRequest(client.packages) && (
+                        <Badge variant="outline" className="border-amber-500/60 text-amber-400">
+                          Renewal requested
+                        </Badge>
+                      )}
+                      <Badge variant={STATUS_VARIANT[client.status]}>{label(client.status)}</Badge>
+                    </div>
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {client.phone} · {label(client.section)}
@@ -148,9 +159,16 @@ export default async function ClientsPage({
                     return (
                       <TableRow key={client.id}>
                         <TableCell>
-                          <Link href={`/clients/${client.id}`} className="font-medium hover:underline">
-                            {client.name}
-                          </Link>
+                          <div className="flex items-center gap-2">
+                            <Link href={`/clients/${client.id}`} className="font-medium hover:underline">
+                              {client.name}
+                            </Link>
+                            {hasRenewalRequest(client.packages) && (
+                              <Badge variant="outline" className="border-amber-500/60 text-amber-400">
+                                Renewal requested
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">{client.phone}</TableCell>
                         <TableCell>{label(client.section)}</TableCell>

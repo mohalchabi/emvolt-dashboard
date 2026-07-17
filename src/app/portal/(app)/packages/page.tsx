@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { packageBalances } from "@/lib/package-balance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { RequestRenewalButton } from "@/components/portal/request-renewal-button";
 
 export default async function PortalPackagesPage() {
   const { client } = await requireClientSession();
@@ -52,10 +53,14 @@ export default async function PortalPackagesPage() {
                     Purchased {pkg.purchaseDate.toLocaleDateString()}
                     {pkg.expiryDate ? ` · expires ${pkg.expiryDate.toLocaleDateString()}` : ""}
                   </span>
-                  {pkg.renewalRequestedAt && (
+                  {pkg.renewalRequestedAt ? (
                     <span className="text-primary">
                       Renewal requested {pkg.renewalRequestedAt.toLocaleDateString()} — the studio will follow up.
                     </span>
+                  ) : (
+                    <div className="mt-1">
+                      <RequestRenewalButton packageId={pkg.id} />
+                    </div>
                   )}
                 </CardContent>
               </Card>
