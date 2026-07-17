@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientDetailPanel } from "@/components/clients/client-detail-panel";
 import { PackagesPanel } from "@/components/clients/packages-panel";
 import { InbodyPanel } from "@/components/clients/inbody-panel";
+import { MessagesPanel } from "@/components/clients/messages-panel";
 
 const SESSION_STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   scheduled: "outline",
@@ -34,7 +35,7 @@ export default async function ClientDetailPage({
   const isOwnTrainer = session.user.role === "trainer" && client.assignedTrainerId === session.user.id;
   if (!canManage && !isOwnTrainer) redirect("/");
 
-  const [trainers, logs, sessions, inBodyResults] = await Promise.all([
+  const [trainers, logs, sessions, inBodyResults, messages] = await Promise.all([
     prisma.staff.findMany({ where: { active: true, role: "trainer" }, orderBy: { name: "asc" } }),
     prisma.activityLog.findMany({
       where: { clientId: id },
@@ -50,6 +51,11 @@ export default async function ClientDetailPage({
       where: { clientId: id },
       include: { uploadedBy: true },
       orderBy: { takenAt: "desc" },
+    }),
+    prisma.message.findMany({
+      where: { clientId: id },
+      include: { authorStaff: true },
+      orderBy: { createdAt: "asc" },
     }),
   ]);
 
@@ -86,6 +92,7 @@ export default async function ClientDetailPage({
         <div className="flex flex-col gap-6">
           <PackagesPanel clientId={client.id} packages={client.packages} />
           <InbodyPanel clientId={client.id} results={inBodyResults} />
+          <MessagesPanel clientId={client.id} clientName={client.name} messages={messages} />
 
           <Card>
             <CardHeader>

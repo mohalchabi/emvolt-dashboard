@@ -169,3 +169,16 @@ export async function requestPackageRenewal(packageId: string) {
   revalidatePath(`/clients/${client.id}`);
   revalidatePath("/clients");
 }
+
+export async function sendClientMessage(text: string) {
+  const { client } = await requireClientSession();
+  const trimmed = text.trim();
+  if (!trimmed) return;
+
+  await prisma.message.create({
+    data: { clientId: client.id, authorIsClient: true, text: trimmed },
+  });
+
+  revalidatePath("/portal/messages");
+  revalidatePath(`/clients/${client.id}`);
+}

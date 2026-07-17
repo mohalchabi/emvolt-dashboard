@@ -147,3 +147,23 @@ export async function createPackage(input: CreatePackageInput) {
   revalidatePath("/clients");
   return pkg;
 }
+
+export async function sendStaffMessage(input: { clientId: string; text: string }) {
+  const session = await requireSession();
+  const text = input.text.trim();
+  if (!text) return;
+
+  const client = await prisma.client.findUnique({ where: { id: input.clientId } });
+  if (!client) throw new Error("Could not find that client.");
+
+  const canMessage =
+    session.user.role === "admin" ||
+    (session.user.role === "trainer" && client.assignedTrainerId === session.user.id);
+  if (!canMessage) throw new Error("You don't have access to message this client.");
+
+  await prisma.message.create({
+    data: { clientId: input.clientId, authorIsClient: false, authorStaffId: session.user.id, text },
+  });
+
+  revalidatePath(`/clients/${input.clientId}`);
+}
