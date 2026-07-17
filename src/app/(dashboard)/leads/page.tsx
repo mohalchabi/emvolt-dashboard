@@ -138,7 +138,14 @@ export default async function LeadsPage({
         </Card>
       ) : (
         <>
-          <LeadsList leads={leads} staff={staff} t={t.leadsList} locale={locale} common={t.common} />
+          <LeadsList
+            leads={leads}
+            staff={staff}
+            t={t.leadsList}
+            campaignT={t.sendCampaignDialog}
+            locale={locale}
+            common={t.common}
+          />
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between gap-3">

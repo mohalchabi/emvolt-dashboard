@@ -11,9 +11,12 @@ import {
   assignLeadSchema,
   updateLeadSectionSchema,
   addNoteSchema,
+  sendLeadCampaignSchema,
   type CreateLeadInput,
+  type SendLeadCampaignInput,
 } from "@/lib/schemas/lead";
 import { logContactAttemptSchema, type LogContactAttemptInput } from "@/lib/schemas/contact";
+import { isWhatsappConfigured, sendWhatsappMessage } from "@/lib/notify/whatsapp";
 
 // Full lead-list browsing and distribution is admin-only; everyone else may
 // only act on a lead already assigned to them. This guards the server
@@ -138,6 +141,46 @@ export async function bulkAssignLeads(input: { leadIds: string[]; staffId: strin
   revalidatePath("/leads");
   revalidatePath("/my-leads");
   return { count: input.leadIds.length, staffName: staff.name };
+}
+
+// Marketing campaigns are admin-only, same as bulk assignment. Sends run
+// sequentially and skip failures rather than aborting the whole batch — one
+// bad number shouldn't block the rest of the campaign. See
+// src/lib/notify/whatsapp.ts for the dev-log fallback used until a WhatsApp
+// Sender is registered.
+export async function sendLeadCampaign(input: SendLeadCampaignInput) {
+  const session = await requireRole(["admin"]);
+  const { leadIds, message } = sendLeadCampaignSchema.parse(input);
+
+  const leads = await prisma.lead.findMany({
+    where: { id: { in: leadIds } },
+    select: { id: true, phone: true },
+  });
+  if (leads.length === 0) throw new Error("No leads selected.");
+
+  const succeeded: string[] = [];
+  for (const lead of leads) {
+    try {
+      await sendWhatsappMessage(lead.phone, message);
+      succeeded.push(lead.id);
+    } catch {
+      // keep going
+    }
+  }
+
+  if (succeeded.length > 0) {
+    await prisma.activityLog.createMany({
+      data: succeeded.map((leadId) => ({
+        leadId,
+        authorId: session.user.id,
+        text: "(Campaign) WhatsApp marketing message sent.",
+      })),
+    });
+  }
+
+  revalidatePath("/leads");
+  revalidatePath("/my-leads");
+  return { sent: succeeded.length, failed: leads.length - succeeded.length, simulated: !isWhatsappConfigured() };
 }
 
 export async function updateLeadSection(input: { leadId: string; section: string }) {

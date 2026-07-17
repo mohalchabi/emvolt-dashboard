@@ -26,6 +26,7 @@ import {
 import { label } from "@/lib/constants";
 import { guessGender } from "@/lib/gender-guess";
 import { bulkAssignLeads } from "@/lib/actions/leads";
+import { SendCampaignDialog } from "@/components/leads/send-campaign-dialog";
 import type { Lead, Staff } from "@/generated/prisma/client";
 import type { Dictionary, Locale } from "@/lib/i18n";
 
@@ -44,12 +45,14 @@ export function LeadsList({
   leads,
   staff,
   t,
+  campaignT,
   locale,
   common,
 }: {
   leads: LeadWithStaff[];
   staff: Staff[];
   t: Dictionary["leadsList"];
+  campaignT: Dictionary["sendCampaignDialog"];
   locale: Locale;
   common: Dictionary["common"];
 }) {
@@ -57,6 +60,7 @@ export function LeadsList({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [target, setTarget] = useState<string>("");
   const [isPending, startTransition] = useTransition();
+  const [campaignOpen, setCampaignOpen] = useState(false);
 
   const allSelected = leads.length > 0 && selected.size === leads.length;
 
@@ -116,11 +120,22 @@ export function LeadsList({
           <Button size="sm" onClick={onAssign} disabled={!target || isPending}>
             {isPending ? t.assigning : t.assign}
           </Button>
+          <Button size="sm" variant="outline" onClick={() => setCampaignOpen(true)}>
+            {campaignT.trigger}
+          </Button>
           <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             {common.clear}
           </Button>
         </div>
       )}
+
+      <SendCampaignDialog
+        open={campaignOpen}
+        onOpenChange={setCampaignOpen}
+        leadIds={Array.from(selected)}
+        onSent={() => setSelected(new Set())}
+        t={campaignT}
+      />
 
       {/* Mobile: stacked cards */}
       <div className="flex flex-col gap-2 sm:hidden">

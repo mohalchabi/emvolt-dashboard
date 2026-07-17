@@ -153,6 +153,18 @@ export const ar: Dictionary = {
     creating: "جارٍ الإنشاء...",
     couldNotCreate: "تعذّر إنشاء العميل المحتمل.",
   },
+  sendCampaignDialog: {
+    trigger: "إرسال حملة واتساب",
+    title: "الإرسال إلى {count} من العملاء المحتملين",
+    description: "عدّل الرسالة أدناه ثم أرسل. سيتم تسجيل ذلك في سجل نشاط كل عميل محتمل.",
+    cancel: "إلغاء",
+    send: "إرسال إلى {count}",
+    sending: "جارٍ الإرسال...",
+    sentResult: "تم الإرسال إلى {count} من العملاء المحتملين.",
+    simulatedResult: "تم تسجيل {count} رسالة (واتساب غير متصل بعد - لم يتم إرسال شيء فعلياً).",
+    failedResult: "فشل الإرسال لـ {count} من العملاء المحتملين.",
+    couldNotSend: "تعذّر إرسال الحملة.",
+  },
   myLeadsPage: {
     title: "عملائي المحتملون",
     assignedSingular: "عميل محتمل معيّن لك.",

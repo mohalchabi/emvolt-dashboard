@@ -151,6 +151,18 @@ export const en = {
     creating: "Creating...",
     couldNotCreate: "Could not create lead.",
   },
+  sendCampaignDialog: {
+    trigger: "Send WhatsApp Campaign",
+    title: "Send to {count} leads",
+    description: "Edit the message below, then send. This is logged on each lead's activity.",
+    cancel: "Cancel",
+    send: "Send to {count}",
+    sending: "Sending...",
+    sentResult: "Sent to {count} leads.",
+    simulatedResult: "Logged {count} messages (WhatsApp isn't connected yet — nothing was actually sent).",
+    failedResult: "Failed for {count} leads.",
+    couldNotSend: "Could not send campaign.",
+  },
   myLeadsPage: {
     title: "My Leads",
     assignedSingular: "lead assigned to you.",

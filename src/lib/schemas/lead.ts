@@ -33,3 +33,9 @@ export const addNoteSchema = z.object({
   clientId: z.string().optional(),
   text: z.string().min(1, "Note can't be empty"),
 });
+
+export const sendLeadCampaignSchema = z.object({
+  leadIds: z.array(z.string()).min(1, "Select at least one lead"),
+  message: z.string().min(1, "Message can't be empty"),
+});
+export type SendLeadCampaignInput = z.infer<typeof sendLeadCampaignSchema>;
