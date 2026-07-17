@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Home, CalendarDays, Package, Activity } from "lucide-react";
+import { Home, CalendarDays, CalendarPlus, Package, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { signOutClientAction } from "@/lib/actions/client-auth";
@@ -11,6 +11,7 @@ import { signOutClientAction } from "@/lib/actions/client-auth";
 const NAV_ITEMS = [
   { href: "/portal", label: "Home", icon: Home },
   { href: "/portal/classes", label: "Classes", icon: CalendarDays },
+  { href: "/portal/book", label: "Book", icon: CalendarPlus },
   { href: "/portal/packages", label: "Packages", icon: Package },
   { href: "/portal/inbody", label: "InBody", icon: Activity },
 ];

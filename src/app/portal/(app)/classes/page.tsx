@@ -1,8 +1,12 @@
+import Link from "next/link";
 import { requireClientSession } from "@/lib/client-auth";
 import { prisma } from "@/lib/db";
 import { label } from "@/lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { UpcomingSessionRow } from "@/components/portal/upcoming-session-row";
+import { cn } from "@/lib/utils";
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   scheduled: "outline",
@@ -34,9 +38,14 @@ export default async function PortalClassesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">My Classes</h1>
-        <p className="text-sm text-muted-foreground">Your upcoming and past sessions.</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">My Classes</h1>
+          <p className="text-sm text-muted-foreground">Your upcoming and past sessions.</p>
+        </div>
+        <Link href="/portal/book" className={cn(buttonVariants())}>
+          Book a session
+        </Link>
       </div>
 
       <Card>
@@ -46,19 +55,7 @@ export default async function PortalClassesPage() {
         <CardContent className="flex flex-col gap-2">
           {upcoming.length === 0 && <p className="text-sm text-muted-foreground">No upcoming sessions.</p>}
           {upcoming.map((s) => (
-            <div key={s.id} className="flex items-center justify-between gap-2 rounded-lg border p-3 text-sm">
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">{label(s.type)}</Badge>
-                  <span className="font-medium">with {s.trainer.name}</span>
-                </div>
-                <span className="text-muted-foreground">
-                  {s.datetime.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })} at{" "}
-                  {s.datetime.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                </span>
-              </div>
-              <Badge variant={STATUS_VARIANT[s.status]}>{label(s.status)}</Badge>
-            </div>
+            <UpcomingSessionRow key={s.id} session={s} trainerName={s.trainer.name} />
           ))}
         </CardContent>
       </Card>
