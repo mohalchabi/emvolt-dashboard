@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "ClientOtp" ADD COLUMN IF NOT EXISTS "provider" TEXT NOT NULL DEFAULT 'local';
+ALTER TABLE "ClientOtp" ALTER COLUMN "codeHash" DROP NOT NULL;

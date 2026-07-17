@@ -111,9 +111,18 @@ model Client {
 model ClientOtp {
   id         String    @id @default(cuid())
   phone      String
-  codeHash   String
+  // "local" codes are generated/hashed/verified by us (dev bypass, and any
+  // environment without Twilio Verify configured). "twilio" codes are
+  // generated and checked by Twilio Verify itself — codeHash is unused then.
+  provider   String    @default("local")
+  codeHash   String?
   attempts   Int       @default(0)
   expiresAt  DateTime
+  // Twilio Verify deletes its verification resource once a check succeeds,
+  // so a second VerificationCheck call for the same code 404s. We cache the
+  // first success here so the multi-account picker's resubmit (same phone +
+  // code, now with a chosen clientId) doesn't need to re-ask Twilio.
+  verifiedAt DateTime?
   consumedAt DateTime?
   createdAt  DateTime  @default(now())
 

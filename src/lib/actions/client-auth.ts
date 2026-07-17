@@ -4,7 +4,7 @@ import { randomInt, createHmac, timingSafeEqual } from "crypto";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { createClientSession, clearClientSession } from "@/lib/client-auth";
-import { sendOtpSms } from "@/lib/notify/sms";
+import { isTwilioVerifyConfigured, startOtpVerification, checkOtpVerification, logOtpSms } from "@/lib/notify/sms";
 import { requestOtpSchema, verifyOtpSchema, type RequestOtpInput, type VerifyOtpInput } from "@/lib/schemas/client-auth";
 
 const CODE_TTL_MS = 5 * 60_000;
@@ -39,16 +39,25 @@ export async function requestOtp(input: RequestOtpInput) {
     throw new Error("Please wait a moment before requesting another code.");
   }
 
+  if (isTwilioVerifyConfigured()) {
+    await startOtpVerification(phone);
+    await prisma.clientOtp.create({
+      data: { phone, provider: "twilio", expiresAt: new Date(Date.now() + CODE_TTL_MS) },
+    });
+    return;
+  }
+
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
   await prisma.clientOtp.create({
     data: {
       phone,
+      provider: "local",
       codeHash: hashCode(phone, code),
       expiresAt: new Date(Date.now() + CODE_TTL_MS),
     },
   });
 
-  await sendOtpSms(phone, code);
+  await logOtpSms(phone, code);
 }
 
 export type VerifyOtpResult =
@@ -67,9 +76,24 @@ export async function verifyOtp(input: VerifyOtpInput): Promise<VerifyOtpResult>
     throw new Error("Too many incorrect attempts. Request a new code.");
   }
 
-  const expected = Buffer.from(hashCode(phone, code));
-  const got = Buffer.from(otp.codeHash);
-  const isMatch = expected.length === got.length && timingSafeEqual(expected, got);
+  let isMatch: boolean;
+  if (otp.provider === "twilio") {
+    if (otp.verifiedAt) {
+      // Already confirmed with Twilio on an earlier submission (e.g. the
+      // multi-account picker resubmitting the same code) — Twilio would
+      // 404 a second check, so trust our cached result instead.
+      isMatch = true;
+    } else {
+      isMatch = await checkOtpVerification(phone, code);
+      if (isMatch) {
+        await prisma.clientOtp.update({ where: { id: otp.id }, data: { verifiedAt: new Date() } });
+      }
+    }
+  } else {
+    const expected = Buffer.from(hashCode(phone, code));
+    const got = Buffer.from(otp.codeHash ?? "");
+    isMatch = expected.length === got.length && timingSafeEqual(expected, got);
+  }
 
   if (!isMatch) {
     await prisma.clientOtp.update({ where: { id: otp.id }, data: { attempts: { increment: 1 } } });
