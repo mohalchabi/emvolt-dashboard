@@ -1,8 +1,9 @@
 "use client";
 
-import { useTransition, type FocusEvent } from "react";
+import { useState, useTransition, type FocusEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -10,6 +11,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { STAFF_ROLES, SECTIONS, label } from "@/lib/constants";
@@ -18,6 +28,7 @@ import {
   updateStaffSection,
   updateStaffTarget,
   updateStaffPhone,
+  deleteStaff,
   setStaffActive,
 } from "@/lib/actions/staff";
 import type { Staff } from "@/generated/prisma/client";
@@ -148,6 +159,54 @@ export function StaffPhoneInput({ staff }: { staff: Staff }) {
       disabled={isPending}
       className="w-36"
     />
+  );
+}
+
+export function StaffDeleteButton({ staff, isSelf }: { staff: Staff; isSelf: boolean }) {
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function onConfirm() {
+    startTransition(async () => {
+      try {
+        await deleteStaff({ staffId: staff.id });
+        setOpen(false);
+        router.refresh();
+        toast.success(`${staff.name} deleted.`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Could not delete staff member.");
+      }
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger
+        render={
+          <Button variant="ghost" size="sm" aria-label="Delete staff" disabled={isSelf}>
+            <Trash2 className="size-4 text-destructive" />
+          </Button>
+        }
+      />
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Delete {staff.name}?</DialogTitle>
+          <DialogDescription>
+            This permanently removes them from the sign-in allow-list. Only possible if they have no
+            leads, clients, sessions, or activity on record — if they do, deactivate instead.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
+            {isPending ? "Deleting..." : "Delete"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -29,3 +29,14 @@ export const setStaffActiveSchema = z.object({
   staffId: z.string(),
   active: z.boolean(),
 });
+
+export const updateStaffDetailsSchema = z.object({
+  staffId: z.string(),
+  name: z.string().min(2, "Name is required"),
+  email: z.string().email("Valid email is required"),
+});
+export type UpdateStaffDetailsInput = z.infer<typeof updateStaffDetailsSchema>;
+
+export const deleteStaffSchema = z.object({
+  staffId: z.string(),
+});

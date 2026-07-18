@@ -10,12 +10,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { NewStaffDialog } from "@/components/staff/new-staff-dialog";
+import { EditStaffDialog } from "@/components/staff/edit-staff-dialog";
 import {
   StaffRoleSelect,
   StaffSectionSelect,
   StaffTargetInput,
   StaffPhoneInput,
   StaffActiveToggle,
+  StaffDeleteButton,
 } from "@/components/staff/staff-row-actions";
 
 export default async function StaffPage() {
@@ -48,14 +50,20 @@ export default async function StaffPage() {
           <div className="flex flex-col gap-2 sm:hidden">
             {staff.map((s) => (
               <div key={s.id} className="flex flex-col gap-3 rounded-lg border bg-card p-3">
-                <div>
-                  <div className="font-medium">
-                    {s.name}
-                    {s.id === session.user.id && (
-                      <span className="ml-2 text-xs text-muted-foreground">(you)</span>
-                    )}
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="font-medium">
+                      {s.name}
+                      {s.id === session.user.id && (
+                        <span className="ml-2 text-xs text-muted-foreground">(you)</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground">{s.email}</div>
                   </div>
-                  <div className="text-sm text-muted-foreground">{s.email}</div>
+                  <div className="flex items-center">
+                    <EditStaffDialog staff={s} />
+                    <StaffDeleteButton staff={s} isSelf={s.id === session.user.id} />
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <StaffRoleSelect staff={s} />
@@ -87,6 +95,7 @@ export default async function StaffPage() {
                     <TableHead>Section</TableHead>
                     <TableHead>Lead Target</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -113,6 +122,12 @@ export default async function StaffPage() {
                       </TableCell>
                       <TableCell>
                         <StaffActiveToggle staff={s} isSelf={s.id === session.user.id} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end">
+                          <EditStaffDialog staff={s} />
+                          <StaffDeleteButton staff={s} isSelf={s.id === session.user.id} />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
