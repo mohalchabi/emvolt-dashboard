@@ -37,6 +37,7 @@ import { createPackage } from "@/lib/actions/clients";
 import type { PackageTemplate } from "@/generated/prisma/client";
 
 const CUSTOM = "custom";
+const DISCOUNT_RATE = 0.45;
 
 export function NewPackageDialog({
   clientId,
@@ -68,6 +69,14 @@ export function NewPackageDialog({
   const watchedPrice = form.watch("price");
   const priceDiffersFromTemplate =
     !!selectedTemplate && Number(watchedPrice) !== selectedTemplate.price;
+
+  function applyDiscount() {
+    if (!selectedTemplate) return;
+    form.setValue("price", Math.round(selectedTemplate.price * (1 - DISCOUNT_RATE)), {
+      shouldValidate: true,
+    });
+    form.setValue("priceOverrideReason", "45% special offer", { shouldValidate: true });
+  }
 
   function onTemplateChange(value: string) {
     setTemplateChoice(value);
@@ -178,6 +187,12 @@ export function NewPackageDialog({
                 )}
               />
             </div>
+
+            {selectedTemplate && (
+              <Button type="button" variant="outline" size="sm" onClick={applyDiscount} className="self-start">
+                Apply 45% Off ({Math.round(selectedTemplate.price * (1 - DISCOUNT_RATE)).toLocaleString()} SAR)
+              </Button>
+            )}
 
             {priceDiffersFromTemplate && (
               <FormField
