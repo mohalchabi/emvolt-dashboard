@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/db";
 import { getSystemAuthorId } from "@/lib/system-author";
+import { sendSms } from "@/lib/notify/twilio-sms";
 
 // cal.com signs the raw request body with HMAC-SHA256 using the webhook
 // secret configured on the event type / webhook subscription.
@@ -14,15 +15,74 @@ function verifySignature(rawBody: string, signature: string | null, secret: stri
   return timingSafeEqual(expectedBuf, gotBuf);
 }
 
-// EmVolt's cal.com event types aren't wired up yet, so section isn't a
-// structured field on the booking. Only set it on explicit evidence in the
-// title — guessing a default here is worse than leaving it for staff to set
-// during first contact (this is a segregated-section studio).
-function inferSection(title: string | undefined): "male" | "female" | null {
-  const t = (title ?? "").toLowerCase();
+// EmVolt runs one shared cal.com booking link for everyone (not a link per
+// trainer), so which section a booking is for isn't implicit in the event
+// type — it has to come from a custom booking question the event type asks
+// every attendee (e.g. "Which session are you booking? Male / Female").
+// cal.com puts custom-question answers in `payload.responses` (v2 shape) or
+// `payload.customInputs` (legacy); we don't depend on a specific field name,
+// just scan every answer for an explicit "male"/"female" value. Title text is
+// still checked as a fallback for any event type that encodes it there
+// instead. No match just means a human sets it during first contact, same as
+// before.
+function inferSection(payload: CalcomPayload): "male" | "female" | null {
+  const answers: unknown[] = [
+    ...Object.values(payload.responses ?? {}).map((r) => r?.value),
+    ...(payload.customInputs ?? []).map((c) => c?.value),
+  ];
+  for (const answer of answers) {
+    if (typeof answer !== "string") continue;
+    const v = answer.trim().toLowerCase();
+    if (v === "female" || v === "women") return "female";
+    if (v === "male" || v === "men") return "male";
+  }
+
+  const t = (payload.title ?? payload.eventType?.title ?? "").toLowerCase();
   if (t.includes("female") || t.includes("women")) return "female";
   if (t.includes("male") || t.includes("men")) return "male";
   return null;
+}
+
+// Auto-assigning only makes sense when there's exactly one active trainer in
+// that section — otherwise which of them gets it is a real judgment call a
+// human should make, not something to guess at. This also means the rule
+// keeps working correctly on its own as the roster changes (e.g. today there
+// are two female trainers so female bookings stay unassigned for manual
+// pick, but if that ever drops to one, auto-assignment kicks in for them too
+// without any code change).
+async function resolveAutoAssignedTrainer(section: "male" | "female" | null) {
+  if (!section) return null;
+  const trainers = await prisma.staff.findMany({
+    where: { role: "trainer", section, active: true },
+  });
+  return trainers.length === 1 ? trainers[0] : null;
+}
+
+async function notifyNewTrialBooking(params: {
+  leadName: string;
+  leadPhone: string;
+  section: "male" | "female" | null;
+  startTime?: string;
+  assignedTrainer: { id: string; name: string; phone: string | null } | null;
+}) {
+  const { leadName, leadPhone, section, startTime, assignedTrainer } = params;
+  const when = startTime ? new Date(startTime).toLocaleString("en-US", { timeZone: "Asia/Riyadh" }) : "time TBD";
+  const sectionLabel = section ? (section === "male" ? "Male" : "Female") : "unknown";
+  const assignLabel = assignedTrainer ? `Assigned to ${assignedTrainer.name}.` : "Not auto-assigned — needs manual pick.";
+  const message = `New 1 SAR trial booked: ${leadName} (${leadPhone}), ${when}. Section: ${sectionLabel}. ${assignLabel}`;
+
+  const admins = await prisma.staff.findMany({
+    where: { role: "admin", active: true, phone: { not: null } },
+  });
+  const recipients = new Map<string, string>();
+  for (const admin of admins) if (admin.phone) recipients.set(admin.phone, admin.phone);
+  if (assignedTrainer?.phone) recipients.set(assignedTrainer.phone, assignedTrainer.phone);
+
+  await Promise.all(
+    [...recipients.values()].map((phone) =>
+      sendSms(phone, message).catch((err) => console.error(`Failed to SMS ${phone}:`, err))
+    )
+  );
 }
 
 type CalcomPayload = {
@@ -32,6 +92,8 @@ type CalcomPayload = {
   startTime?: string;
   eventType?: { title?: string };
   attendees?: { name?: string; email?: string; phone?: string; smsReminderNumber?: string }[];
+  responses?: Record<string, { label?: string; value?: unknown } | undefined>;
+  customInputs?: { label?: string; value?: unknown }[];
 };
 
 export async function POST(req: NextRequest) {
@@ -55,28 +117,38 @@ export async function POST(req: NextRequest) {
   }
 
   const { triggerEvent, payload } = body;
-  const uid = payload?.uid;
-  if (!triggerEvent || !uid) {
-    return NextResponse.json({ error: "Missing triggerEvent or payload.uid" }, { status: 400 });
+  if (!triggerEvent) {
+    return NextResponse.json({ error: "Missing triggerEvent" }, { status: 400 });
   }
+
+  // cal.com's "Ping test" (and any trigger we don't otherwise handle) sends
+  // a generic test event with no payload.uid — that's not an error, it's
+  // just not one of the three booking events below, so it falls through to
+  // the default case instead of failing the uid check meant for those.
+  const uid = payload?.uid;
 
   switch (triggerEvent) {
     case "BOOKING_CREATED": {
+      if (!uid) return NextResponse.json({ error: "Missing payload.uid" }, { status: 400 });
       const existing = await prisma.lead.findUnique({ where: { calcomBookingUid: uid } });
       if (existing) {
         return NextResponse.json({ ok: true, dedup: true, leadId: existing.id });
       }
 
       const attendee = payload?.attendees?.[0];
+      const section = inferSection(payload ?? {});
+      const autoAssignedTrainer = await resolveAutoAssignedTrainer(section);
+
       const lead = await prisma.lead.create({
         data: {
           name: attendee?.name ?? "Unknown (cal.com)",
           phone: attendee?.phone ?? attendee?.smsReminderNumber ?? "unknown",
           source: "cal_com",
           interestedIn: "ems",
-          section: inferSection(payload?.eventType?.title ?? payload?.title),
+          section,
           status: "new",
           calcomBookingUid: uid,
+          assignedStaffId: autoAssignedTrainer?.id ?? null,
         },
       });
 
@@ -84,9 +156,19 @@ export async function POST(req: NextRequest) {
         data: {
           leadId: lead.id,
           authorId: await getSystemAuthorId(),
-          text: `Lead created from cal.com booking (${payload?.title ?? "free trial"}).`,
+          text: `Lead created from cal.com booking (${payload?.title ?? "free trial"}).${
+            autoAssignedTrainer ? ` Auto-assigned to ${autoAssignedTrainer.name}.` : ""
+          }`,
         },
       });
+
+      await notifyNewTrialBooking({
+        leadName: lead.name,
+        leadPhone: lead.phone,
+        section,
+        startTime: payload?.startTime,
+        assignedTrainer: autoAssignedTrainer,
+      }).catch((err) => console.error("Failed to send trial-booking notification:", err));
 
       return NextResponse.json({ ok: true, leadId: lead.id }, { status: 201 });
     }
