@@ -17,6 +17,7 @@ import {
   updateStaffRole,
   updateStaffSection,
   updateStaffTarget,
+  updateStaffPhone,
   setStaffActive,
 } from "@/lib/actions/staff";
 import type { Staff } from "@/generated/prisma/client";
@@ -116,6 +117,36 @@ export function StaffTargetInput({ staff }: { staff: Staff }) {
       onBlur={onBlur}
       disabled={isPending}
       className="w-20"
+    />
+  );
+}
+
+export function StaffPhoneInput({ staff }: { staff: Staff }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function onBlur(e: FocusEvent<HTMLInputElement>) {
+    const value = e.target.value.trim() || null;
+    if (value === (staff.phone ?? null)) return;
+    startTransition(async () => {
+      try {
+        await updateStaffPhone({ staffId: staff.id, phone: value });
+        router.refresh();
+      } catch {
+        toast.error("Could not update phone.");
+      }
+    });
+  }
+
+  return (
+    <Input
+      key={staff.phone ?? "unset"}
+      type="tel"
+      defaultValue={staff.phone ?? ""}
+      placeholder="+9665..."
+      onBlur={onBlur}
+      disabled={isPending}
+      className="w-36"
     />
   );
 }

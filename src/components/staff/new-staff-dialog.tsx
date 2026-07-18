@@ -42,7 +42,7 @@ export function NewStaffDialog() {
 
   const form = useForm<CreateStaffInput>({
     resolver: zodResolver(createStaffSchema),
-    defaultValues: { name: "", email: "", role: "trainer", section: "male" },
+    defaultValues: { name: "", email: "", phone: "", role: "trainer", section: "male" },
   });
 
   const role = form.watch("role");
@@ -52,7 +52,7 @@ export function NewStaffDialog() {
       try {
         await createStaff(values);
         setOpen(false);
-        form.reset({ name: "", email: "", role: "trainer", section: "male" });
+        form.reset({ name: "", email: "", phone: "", role: "trainer", section: "male" });
         router.refresh();
         toast.success("Staff member added.");
       } catch {
@@ -98,6 +98,21 @@ export function NewStaffDialog() {
                   <FormControl>
                     <Input placeholder="name@emvolt.sa" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone (optional)</FormLabel>
+                  <FormControl>
+                    <Input type="tel" placeholder="+9665..." {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">Used for SMS alerts, e.g. new trial bookings.</p>
                   <FormMessage />
                 </FormItem>
               )}

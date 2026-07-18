@@ -17,6 +17,7 @@ model Staff {
   id         String   @id @default(cuid())
   name       String
   email      String   @unique
+  phone      String? // E.164-ish, e.g. +9665XXXXXXXX — used for SMS alerts (new trial bookings, etc.)
   role       String // admin | trainer | front_desk
   section    String? // male | female | null (both/admin/front-desk)
   active     Boolean  @default(true)

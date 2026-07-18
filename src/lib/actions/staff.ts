@@ -7,6 +7,7 @@ import {
   createStaffSchema,
   updateStaffRoleSchema,
   updateStaffSectionSchema,
+  updateStaffPhoneSchema,
   setStaffActiveSchema,
   type CreateStaffInput,
 } from "@/lib/schemas/staff";
@@ -19,6 +20,7 @@ export async function createStaff(input: CreateStaffInput) {
     data: {
       name: data.name,
       email: data.email.toLowerCase(),
+      phone: data.phone || null,
       role: data.role,
       section: data.role === "trainer" ? data.section ?? null : null,
     },
@@ -26,6 +28,15 @@ export async function createStaff(input: CreateStaffInput) {
 
   revalidatePath("/staff");
   return staff;
+}
+
+export async function updateStaffPhone(input: { staffId: string; phone: string | null }) {
+  await requireRole(["admin"]);
+  const data = updateStaffPhoneSchema.parse(input);
+
+  await prisma.staff.update({ where: { id: data.staffId }, data: { phone: data.phone || null } });
+
+  revalidatePath("/staff");
 }
 
 export async function updateStaffRole(input: { staffId: string; role: string }) {

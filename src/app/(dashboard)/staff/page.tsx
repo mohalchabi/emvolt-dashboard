@@ -14,6 +14,7 @@ import {
   StaffRoleSelect,
   StaffSectionSelect,
   StaffTargetInput,
+  StaffPhoneInput,
   StaffActiveToggle,
 } from "@/components/staff/staff-row-actions";
 
@@ -61,6 +62,10 @@ export default async function StaffPage() {
                   <StaffSectionSelect staff={s} />
                 </div>
                 <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Phone</span>
+                  <StaffPhoneInput staff={s} />
+                </div>
+                <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Lead target</span>
                   <StaffTargetInput staff={s} />
                 </div>
@@ -77,6 +82,7 @@ export default async function StaffPage() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Section</TableHead>
                     <TableHead>Lead Target</TableHead>
@@ -93,6 +99,9 @@ export default async function StaffPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">{s.email}</TableCell>
+                      <TableCell>
+                        <StaffPhoneInput staff={s} />
+                      </TableCell>
                       <TableCell>
                         <StaffRoleSelect staff={s} />
                       </TableCell>
