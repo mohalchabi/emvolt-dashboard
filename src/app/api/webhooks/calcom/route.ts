@@ -117,13 +117,19 @@ export async function POST(req: NextRequest) {
   }
 
   const { triggerEvent, payload } = body;
-  const uid = payload?.uid;
-  if (!triggerEvent || !uid) {
-    return NextResponse.json({ error: "Missing triggerEvent or payload.uid" }, { status: 400 });
+  if (!triggerEvent) {
+    return NextResponse.json({ error: "Missing triggerEvent" }, { status: 400 });
   }
+
+  // cal.com's "Ping test" (and any trigger we don't otherwise handle) sends
+  // a generic test event with no payload.uid — that's not an error, it's
+  // just not one of the three booking events below, so it falls through to
+  // the default case instead of failing the uid check meant for those.
+  const uid = payload?.uid;
 
   switch (triggerEvent) {
     case "BOOKING_CREATED": {
+      if (!uid) return NextResponse.json({ error: "Missing payload.uid" }, { status: 400 });
       const existing = await prisma.lead.findUnique({ where: { calcomBookingUid: uid } });
       if (existing) {
         return NextResponse.json({ ok: true, dedup: true, leadId: existing.id });
