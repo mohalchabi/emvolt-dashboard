@@ -82,6 +82,7 @@ export default async function ClientDetailPage({
         <p className="text-sm text-muted-foreground">
           {client.phone}
           {client.email ? ` · ${client.email}` : ""} · client since {client.createdAt.toLocaleDateString()}
+          {client.source ? ` · via ${label(client.source)}` : ""}
         </p>
         {client.convertedFromLead && (
           <p className="mt-1 text-sm">

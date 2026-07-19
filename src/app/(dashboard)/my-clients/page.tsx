@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { NewWalkInClientDialog } from "@/components/clients/new-walkin-client-dialog";
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   active: "default",
@@ -23,11 +24,14 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 export default async function MyClientsPage() {
   const session = await requireRole(["trainer"]);
 
-  const clients = await prisma.client.findMany({
-    where: { assignedTrainerId: session.user.id },
-    include: { packages: true },
-    orderBy: { name: "asc" },
-  });
+  const [clients, templates] = await Promise.all([
+    prisma.client.findMany({
+      where: { assignedTrainerId: session.user.id },
+      include: { packages: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.packageTemplate.findMany({ where: { active: true }, orderBy: [{ name: "asc" }, { sessions: "asc" }] }),
+  ]);
 
   const allPackages = clients.flatMap((c) => c.packages);
   const balances = await packageBalances(allPackages);
@@ -40,11 +44,14 @@ export default async function MyClientsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">My Clients</h1>
-        <p className="text-sm text-muted-foreground">
-          {clients.length} client{clients.length === 1 ? "" : "s"} assigned to you.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">My Clients</h1>
+          <p className="text-sm text-muted-foreground">
+            {clients.length} client{clients.length === 1 ? "" : "s"} assigned to you.
+          </p>
+        </div>
+        <NewWalkInClientDialog templates={templates} />
       </div>
 
       {clients.length === 0 ? (

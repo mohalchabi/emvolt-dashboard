@@ -13,9 +13,11 @@ import {
   assignTrainerSchema,
   createPackageSchema,
   bookClientSessionSchema,
+  createWalkInClientSchema,
   type CreateClientInput,
   type CreatePackageInput,
   type BookClientSessionInput,
+  type CreateWalkInClientInput,
 } from "@/lib/schemas/client";
 
 export async function createClient(input: CreateClientInput) {
@@ -29,6 +31,7 @@ export async function createClient(input: CreateClientInput) {
       email: data.email || null,
       section: data.section,
       assignedTrainerId: data.assignedTrainerId || null,
+      source: data.source || null,
     },
   });
 
@@ -125,6 +128,7 @@ export async function createPackage(input: CreatePackageInput) {
       totalSessions: data.totalSessions,
       price: data.price,
       priceOverrideReason: template && template.price !== data.price ? data.priceOverrideReason?.trim() : null,
+      paymentMethod: data.paymentMethod || null,
       purchaseDate,
       expiryDate,
     },
@@ -132,11 +136,12 @@ export async function createPackage(input: CreatePackageInput) {
 
   const priceNote =
     pkg.priceOverrideReason ? ` at ${pkg.price} SAR (${pkg.priceOverrideReason})` : "";
+  const paymentNote = pkg.paymentMethod ? ` — paid via ${label(pkg.paymentMethod)}` : "";
   await prisma.activityLog.create({
     data: {
       clientId: data.clientId,
       authorId: session.user.id,
-      text: `Purchased ${data.name} (${data.totalSessions} sessions)${priceNote}.`,
+      text: `Purchased ${data.name} (${data.totalSessions} sessions)${priceNote}${paymentNote}.`,
     },
   });
 
@@ -150,6 +155,74 @@ export async function createPackage(input: CreatePackageInput) {
   revalidatePath(`/clients/${data.clientId}`);
   revalidatePath("/clients");
   return pkg;
+}
+
+// Staff signing up a walk-in who was never a Lead — creates the Client and
+// their first Package (with payment method) together, atomically. A trainer
+// calling this is auto-assigned as the client's trainer; anyone else leaves
+// it unassigned (no trainer-picker UI is exposed to them for this action).
+export async function createWalkInClient(input: CreateWalkInClientInput) {
+  const session = await requireSession();
+  const data = createWalkInClientSchema.parse(input);
+
+  const template = data.templateId
+    ? await prisma.packageTemplate.findUnique({ where: { id: data.templateId } })
+    : null;
+
+  if (template && template.price !== data.price && !data.priceOverrideReason?.trim()) {
+    throw new Error("A reason is required when the price differs from the package type's listed price.");
+  }
+
+  const assignedTrainerId = session.user.role === "trainer" ? session.user.id : null;
+  const purchaseDate = new Date();
+  const expiryDate = template ? new Date(purchaseDate.getTime() + template.durationDays * 24 * 60 * 60 * 1000) : null;
+
+  const client = await prisma.$transaction(async (tx) => {
+    const newClient = await tx.client.create({
+      data: {
+        name: data.name,
+        phone: data.phone,
+        email: data.email || null,
+        section: data.section,
+        source: data.source,
+        assignedTrainerId,
+      },
+    });
+
+    const pkg = await tx.package.create({
+      data: {
+        clientId: newClient.id,
+        templateId: template?.id ?? null,
+        name: data.packageName,
+        totalSessions: data.totalSessions,
+        price: data.price,
+        priceOverrideReason: template && template.price !== data.price ? data.priceOverrideReason?.trim() : null,
+        paymentMethod: data.paymentMethod,
+        purchaseDate,
+        expiryDate,
+      },
+    });
+
+    await tx.activityLog.create({
+      data: { clientId: newClient.id, authorId: session.user.id, text: `Client added (walk-in, via ${label(data.source)}).` },
+    });
+
+    const priceNote = pkg.priceOverrideReason ? ` at ${pkg.price} SAR (${pkg.priceOverrideReason})` : "";
+    await tx.activityLog.create({
+      data: {
+        clientId: newClient.id,
+        authorId: session.user.id,
+        text: `Purchased ${pkg.name} (${pkg.totalSessions} sessions)${priceNote} — paid via ${label(data.paymentMethod)}.`,
+      },
+    });
+
+    return newClient;
+  });
+
+  revalidatePath("/clients");
+  revalidatePath("/my-clients");
+  revalidatePath(`/clients/${client.id}`);
+  return client;
 }
 
 export async function bookClientSession(input: BookClientSessionInput) {
