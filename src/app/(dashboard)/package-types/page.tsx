@@ -63,6 +63,7 @@ export default async function PackageTypesPage() {
                     <TableHead>Sessions</TableHead>
                     <TableHead>Duration (days)</TableHead>
                     <TableHead>Price (SAR)</TableHead>
+                    <TableHead>Applies to</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>

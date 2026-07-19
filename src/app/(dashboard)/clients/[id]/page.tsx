@@ -99,7 +99,7 @@ export default async function ClientDetailPage({
         </div>
 
         <div className="flex flex-col gap-6">
-          <PackagesPanel clientId={client.id} packages={client.packages} />
+          <PackagesPanel clientId={client.id} section={client.section} packages={client.packages} />
           <InbodyPanel clientId={client.id} results={inBodyResults} />
           <MessagesPanel clientId={client.id} clientName={client.name} messages={messages} />
 

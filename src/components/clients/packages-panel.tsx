@@ -8,14 +8,19 @@ import type { Package } from "@/generated/prisma/client";
 
 export async function PackagesPanel({
   clientId,
+  section,
   packages,
 }: {
   clientId: string;
+  section: string;
   packages: Package[];
 }) {
   const [balances, templates] = await Promise.all([
     packageBalances(packages),
-    prisma.packageTemplate.findMany({ where: { active: true }, orderBy: [{ name: "asc" }, { sessions: "asc" }] }),
+    prisma.packageTemplate.findMany({
+      where: { active: true, OR: [{ section: null }, { section }] },
+      orderBy: [{ name: "asc" }, { sessions: "asc" }],
+    }),
   ]);
 
   return (

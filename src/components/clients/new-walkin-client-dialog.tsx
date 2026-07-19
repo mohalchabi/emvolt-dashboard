@@ -43,10 +43,8 @@ const DISCOUNT_RATE = 0.45;
 export function NewWalkInClientDialog({ templates }: { templates: PackageTemplate[] }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [templateChoice, setTemplateChoice] = useState<string>(templates[0]?.id ?? CUSTOM);
+  const [templateChoice, setTemplateChoice] = useState<string>(CUSTOM);
   const router = useRouter();
-
-  const selectedTemplate = templates.find((t) => t.id === templateChoice) ?? null;
 
   const defaults = (t: PackageTemplate | null) => ({
     name: "",
@@ -64,8 +62,12 @@ export function NewWalkInClientDialog({ templates }: { templates: PackageTemplat
 
   const form = useForm<z.input<typeof createWalkInClientSchema>, unknown, CreateWalkInClientInput>({
     resolver: zodResolver(createWalkInClientSchema),
-    defaultValues: defaults(selectedTemplate),
+    defaultValues: defaults(null),
   });
+
+  const watchedSection = form.watch("section");
+  const availableTemplates = templates.filter((t) => !t.section || t.section === watchedSection);
+  const selectedTemplate = availableTemplates.find((t) => t.id === templateChoice) ?? null;
 
   const watchedPrice = form.watch("price");
   const priceDiffersFromTemplate = !!selectedTemplate && Number(watchedPrice) !== selectedTemplate.price;
@@ -78,9 +80,19 @@ export function NewWalkInClientDialog({ templates }: { templates: PackageTemplat
 
   function onTemplateChange(value: string) {
     setTemplateChoice(value);
-    const t = templates.find((x) => x.id === value) ?? null;
+    const t = availableTemplates.find((x) => x.id === value) ?? null;
     const current = form.getValues();
     form.reset({ ...defaults(t), name: current.name, phone: current.phone, email: current.email, section: current.section, source: current.source });
+  }
+
+  function onSectionChange(value: "male" | "female" | null) {
+    if (!value) return;
+    form.setValue("section", value);
+    if (selectedTemplate && selectedTemplate.section && selectedTemplate.section !== value) {
+      setTemplateChoice(CUSTOM);
+      const current = form.getValues();
+      form.reset({ ...defaults(null), name: current.name, phone: current.phone, email: current.email, section: value, source: current.source });
+    }
   }
 
   function onSubmit(values: CreateWalkInClientInput) {
@@ -89,8 +101,8 @@ export function NewWalkInClientDialog({ templates }: { templates: PackageTemplat
         const client = await createWalkInClient(values);
         toast.success("Client added.");
         setOpen(false);
-        form.reset(defaults(templates[0] ?? null));
-        setTemplateChoice(templates[0]?.id ?? CUSTOM);
+        form.reset(defaults(null));
+        setTemplateChoice(CUSTOM);
         router.push(`/clients/${client.id}`);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Could not add client.");
@@ -147,7 +159,7 @@ export function NewWalkInClientDialog({ templates }: { templates: PackageTemplat
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Section</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select value={field.value} onValueChange={onSectionChange}>
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue>{(v: string) => label(v)}</SelectValue>
@@ -203,7 +215,7 @@ export function NewWalkInClientDialog({ templates }: { templates: PackageTemplat
                         v === CUSTOM
                           ? "Custom package"
                           : (() => {
-                              const t = templates.find((x) => x.id === v);
+                              const t = availableTemplates.find((x) => x.id === v);
                               return t ? `${t.name} — ${t.sessions} sessions — ${t.price.toLocaleString()} SAR` : v;
                             })()
                       }
@@ -211,7 +223,7 @@ export function NewWalkInClientDialog({ templates }: { templates: PackageTemplat
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {templates.map((t) => (
+                  {availableTemplates.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.name} — {t.sessions} sessions — {t.durationDays} days — {t.price.toLocaleString()} SAR
                     </SelectItem>

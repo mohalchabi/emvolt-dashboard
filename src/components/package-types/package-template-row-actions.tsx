@@ -7,14 +7,27 @@ import { TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { updatePackageTemplate, setPackageTemplateActive } from "@/lib/actions/package-templates";
+import { SECTIONS, label } from "@/lib/constants";
 import type { PackageTemplate } from "@/generated/prisma/client";
+
+const BOTH = "both";
 
 function useFieldUpdate(template: PackageTemplate) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  function commit(field: "name" | "sessions" | "durationDays" | "price", value: string | number) {
+  function commit(
+    field: "name" | "sessions" | "durationDays" | "price" | "section",
+    value: string | number | null,
+  ) {
     startTransition(async () => {
       try {
         await updatePackageTemplate({
@@ -23,6 +36,7 @@ function useFieldUpdate(template: PackageTemplate) {
           sessions: field === "sessions" ? Number(value) : template.sessions,
           durationDays: field === "durationDays" ? Number(value) : template.durationDays,
           price: field === "price" ? Number(value) : template.price,
+          section: field === "section" ? (value as "male" | "female" | null) : (template.section as "male" | "female" | null),
         });
         router.refresh();
       } catch {
@@ -59,6 +73,27 @@ export function PackageTemplateEditableCells({
     commit("name", value);
   }
 
+  function onSectionChange(v: string | null) {
+    if (!v) return;
+    commit("section", v === BOTH ? null : v);
+  }
+
+  const sectionSelect = (
+    <Select key={template.section} value={template.section ?? BOTH} onValueChange={onSectionChange}>
+      <SelectTrigger disabled={isPending} className="w-full">
+        <SelectValue>{(v: string) => (v === BOTH ? "Both" : label(v))}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={BOTH}>Both</SelectItem>
+        {SECTIONS.map((s) => (
+          <SelectItem key={s} value={s}>
+            {label(s)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
   if (layout === "stacked") {
     return (
       <div className="flex flex-col gap-2">
@@ -76,6 +111,10 @@ export function PackageTemplateEditableCells({
             <Label className="text-xs text-muted-foreground">Price (SAR)</Label>
             <Input key={template.price} type="number" min={0} step="0.01" defaultValue={template.price} onBlur={onBlurNumber("price")} disabled={isPending} />
           </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">Applies to</Label>
+          {sectionSelect}
         </div>
       </div>
     );
@@ -95,6 +134,7 @@ export function PackageTemplateEditableCells({
       <TableCell>
         <Input key={template.price} type="number" min={0} step="0.01" defaultValue={template.price} onBlur={onBlurNumber("price")} disabled={isPending} className="w-28" />
       </TableCell>
+      <TableCell className="w-32">{sectionSelect}</TableCell>
     </>
   );
 }

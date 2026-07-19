@@ -31,6 +31,7 @@ export async function updatePackageTemplate(input: UpdatePackageTemplateInput) {
       sessions: data.sessions,
       durationDays: data.durationDays,
       price: data.price,
+      section: data.section ?? null,
     },
   });
 

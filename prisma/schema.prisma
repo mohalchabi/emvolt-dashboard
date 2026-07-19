@@ -144,6 +144,7 @@ model PackageTemplate {
   sessions     Int
   durationDays Int // how many days a client has to use the sessions
   price        Float
+  section      String? // "male" | "female" | null (null = offered to both sections)
   active       Boolean  @default(true) // inactive templates stay for history but drop out of the picker
   createdAt    DateTime @default(now())
 
