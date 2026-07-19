@@ -5,13 +5,17 @@ import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth-helpers";
 import { label } from "@/lib/constants";
 import { addNoteSchema } from "@/lib/schemas/lead";
+import { packageBalances } from "@/lib/package-balance";
+import { isSlotAvailable, DEFAULT_SESSION_DURATION } from "@/lib/portal-availability";
 import {
   createClientSchema,
   updateClientStatusSchema,
   assignTrainerSchema,
   createPackageSchema,
+  bookClientSessionSchema,
   type CreateClientInput,
   type CreatePackageInput,
+  type BookClientSessionInput,
 } from "@/lib/schemas/client";
 
 export async function createClient(input: CreateClientInput) {
@@ -146,6 +150,63 @@ export async function createPackage(input: CreatePackageInput) {
   revalidatePath(`/clients/${data.clientId}`);
   revalidatePath("/clients");
   return pkg;
+}
+
+export async function bookClientSession(input: BookClientSessionInput) {
+  const session = await requireSession();
+  const data = bookClientSessionSchema.parse(input);
+
+  const client = await prisma.client.findUnique({ where: { id: data.clientId } });
+  if (!client) throw new Error("Could not find that client.");
+
+  const canManage = session.user.role === "admin" || session.user.role === "front_desk";
+  const isOwnTrainer = session.user.role === "trainer" && client.assignedTrainerId === session.user.id;
+  if (!canManage && !isOwnTrainer) throw new Error("You don't have access to book for this client.");
+
+  if (!client.assignedTrainerId) throw new Error("Assign a trainer to this client before booking a session.");
+
+  const pkg = await prisma.package.findUnique({ where: { id: data.packageId } });
+  if (!pkg || pkg.clientId !== client.id) throw new Error("Could not find that package.");
+  if (pkg.expiryDate && pkg.expiryDate < new Date()) throw new Error("That package has expired.");
+
+  const balance = (await packageBalances([pkg])).get(pkg.id);
+  if (!balance || balance.remaining <= 0) {
+    throw new Error("That package has no sessions remaining.");
+  }
+
+  const datetime = new Date(data.datetime);
+  if (Number.isNaN(datetime.getTime()) || datetime <= new Date()) {
+    throw new Error("Pick a time in the future.");
+  }
+
+  const available = await isSlotAvailable(client.assignedTrainerId, datetime);
+  if (!available) throw new Error("That trainer already has a session at that time — pick another slot.");
+
+  const newSession = await prisma.session.create({
+    data: {
+      trainerId: client.assignedTrainerId,
+      clientId: client.id,
+      packageId: pkg.id,
+      type: data.type,
+      datetime,
+      duration: DEFAULT_SESSION_DURATION,
+      status: "scheduled",
+    },
+  });
+
+  await prisma.activityLog.create({
+    data: {
+      clientId: client.id,
+      authorId: session.user.id,
+      text: `Booked ${label(data.type)} session for ${datetime.toLocaleString()}.`,
+    },
+  });
+
+  revalidatePath(`/clients/${client.id}`);
+  revalidatePath("/clients");
+  revalidatePath("/my-clients");
+  revalidatePath("/calendar");
+  return newSession;
 }
 
 export async function sendStaffMessage(input: { clientId: string; text: string }) {

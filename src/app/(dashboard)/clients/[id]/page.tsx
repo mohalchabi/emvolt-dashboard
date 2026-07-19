@@ -3,12 +3,14 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth-helpers";
 import { label } from "@/lib/constants";
+import { packageBalances } from "@/lib/package-balance";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientDetailPanel } from "@/components/clients/client-detail-panel";
 import { PackagesPanel } from "@/components/clients/packages-panel";
 import { InbodyPanel } from "@/components/clients/inbody-panel";
 import { MessagesPanel } from "@/components/clients/messages-panel";
+import { BookSessionDialog } from "@/components/clients/book-session-dialog";
 
 const SESSION_STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   scheduled: "outline",
@@ -61,6 +63,12 @@ export default async function ClientDetailPage({
 
   const backHref = canManage ? "/clients" : "/my-clients";
 
+  const activePackages = client.packages.filter((p) => !p.expiryDate || p.expiryDate > new Date());
+  const balances = await packageBalances(activePackages);
+  const eligiblePackages = activePackages
+    .map((p) => ({ id: p.id, name: p.name, remaining: balances.get(p.id)?.remaining ?? 0 }))
+    .filter((p) => p.remaining > 0);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -95,8 +103,9 @@ export default async function ClientDetailPage({
           <MessagesPanel clientId={client.id} clientName={client.name} messages={messages} />
 
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Recent Sessions</CardTitle>
+              <BookSessionDialog clientId={client.id} packages={eligiblePackages} />
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
               {sessions.map((s) => (

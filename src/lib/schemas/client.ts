@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SECTIONS, CLIENT_STATUSES } from "@/lib/constants";
+import { SECTIONS, CLIENT_STATUSES, TRAINING_TYPES } from "@/lib/constants";
 
 export const createClientSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -32,3 +32,11 @@ export const createPackageSchema = z.object({
   expiryDate: z.string().optional().nullable(),
 });
 export type CreatePackageInput = z.infer<typeof createPackageSchema>;
+
+export const bookClientSessionSchema = z.object({
+  clientId: z.string(),
+  packageId: z.string(),
+  type: z.enum(TRAINING_TYPES),
+  datetime: z.string().min(1, "Pick a date and time"),
+});
+export type BookClientSessionInput = z.infer<typeof bookClientSessionSchema>;
