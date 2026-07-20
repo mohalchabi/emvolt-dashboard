@@ -8,6 +8,11 @@ import { isTwilioVerifyConfigured, startOtpVerification, checkOtpVerification, l
 import { requestOtpSchema, verifyOtpSchema, type RequestOtpInput, type VerifyOtpInput } from "@/lib/schemas/client-auth";
 
 const CODE_TTL_MS = 5 * 60_000;
+// Twilio Verify expires its own codes after 10 minutes. Our row has to outlive
+// that, not undercut it — a shorter window makes verifyOtp reject a code Twilio
+// still considers valid, so the customer is told to request a new one while a
+// working code sits in their inbox.
+const TWILIO_CODE_TTL_MS = 10 * 60_000;
 const RESEND_COOLDOWN_MS = 60_000;
 const MAX_REQUESTS_PER_DAY = 5;
 const MAX_VERIFY_ATTEMPTS = 5;
@@ -42,7 +47,7 @@ export async function requestOtp(input: RequestOtpInput) {
   if (isTwilioVerifyConfigured()) {
     await startOtpVerification(phone);
     await prisma.clientOtp.create({
-      data: { phone, provider: "twilio", expiresAt: new Date(Date.now() + CODE_TTL_MS) },
+      data: { phone, provider: "twilio", expiresAt: new Date(Date.now() + TWILIO_CODE_TTL_MS) },
     });
     return;
   }
