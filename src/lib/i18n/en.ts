@@ -70,6 +70,10 @@ export const en = {
     noClientsLow: "No clients running low on sessions.",
     left: "left",
   },
+  recentActivity: {
+    title: "Recent Activity",
+    noActivityYet: "No activity yet.",
+  },
   staffLeaderboard: {
     title: "Staff Leaderboard",
     noLeadsAssignedYet: "No leads assigned yet.",

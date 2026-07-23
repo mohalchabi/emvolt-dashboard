@@ -27,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { updateStaffDetailsSchema, type UpdateStaffDetailsInput } from "@/lib/schemas/staff";
 import { updateStaffDetails } from "@/lib/actions/staff";
+import { friendlyErrorMessage } from "@/lib/friendly-error";
 import type { Staff } from "@/generated/prisma/client";
 
 export function EditStaffDialog({ staff }: { staff: Staff }) {
@@ -47,7 +48,7 @@ export function EditStaffDialog({ staff }: { staff: Staff }) {
         router.refresh();
         toast.success("Staff details updated.");
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not update staff — email may already be in use.");
+        toast.error(friendlyErrorMessage(err, "Could not update staff — email may already be in use."));
       }
     });
   }
