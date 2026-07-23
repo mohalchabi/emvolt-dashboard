@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/auth-helpers";
+import { requireSession, requireRole } from "@/lib/auth-helpers";
+import { createClientSession } from "@/lib/client-auth";
 import { label } from "@/lib/constants";
 import { addNoteSchema } from "@/lib/schemas/lead";
 import { packageBalances } from "@/lib/package-balance";
@@ -41,6 +42,17 @@ export async function createClient(input: CreateClientInput) {
 
   revalidatePath("/clients");
   return client;
+}
+
+// Lets an admin see exactly what a given client sees in the portal — no
+// phone/OTP involved, so it works regardless of whether SMS delivery is
+// wired up. Sets the same session cookie a real OTP login would; it doesn't
+// touch or require the admin's own staff session, which is a separate
+// cookie entirely.
+export async function previewAsClient(clientId: string) {
+  await requireRole(["admin"]);
+  const client = await prisma.client.findUniqueOrThrow({ where: { id: clientId } });
+  await createClientSession(client.id);
 }
 
 export async function updateClientStatus(input: { clientId: string; status: string }) {
