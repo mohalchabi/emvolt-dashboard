@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/db";
 import { getSystemAuthorId } from "@/lib/system-author";
-import { sendSms } from "@/lib/notify/twilio-sms";
+import { sendSms } from "@/lib/notify/unifonic-sms";
 
 // cal.com signs the raw request body with HMAC-SHA256 using the webhook
 // secret configured on the event type / webhook subscription.

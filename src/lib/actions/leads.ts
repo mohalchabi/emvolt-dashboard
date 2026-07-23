@@ -16,7 +16,7 @@ import {
   type SendLeadCampaignInput,
 } from "@/lib/schemas/lead";
 import { logContactAttemptSchema, type LogContactAttemptInput } from "@/lib/schemas/contact";
-import { sendSms } from "@/lib/notify/twilio-sms";
+import { sendSms } from "@/lib/notify/unifonic-sms";
 import { isWhatsappConfigured, sendWhatsappMessage } from "@/lib/notify/whatsapp";
 
 // Full lead-list browsing and distribution is admin-only; everyone else may
