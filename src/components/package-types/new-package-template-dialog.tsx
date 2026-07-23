@@ -26,10 +26,22 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   createPackageTemplateSchema,
   type CreatePackageTemplateInput,
 } from "@/lib/schemas/package-template";
 import { createPackageTemplate } from "@/lib/actions/package-templates";
+import { SECTIONS, label } from "@/lib/constants";
+
+const BOTH = "both";
+
+const defaultValues = { name: "", sessions: 8, durationDays: 30, price: 0, section: null };
 
 export function NewPackageTemplateDialog() {
   const [open, setOpen] = useState(false);
@@ -38,7 +50,7 @@ export function NewPackageTemplateDialog() {
 
   const form = useForm<z.input<typeof createPackageTemplateSchema>, unknown, CreatePackageTemplateInput>({
     resolver: zodResolver(createPackageTemplateSchema),
-    defaultValues: { name: "", sessions: 8, durationDays: 30, price: 0 },
+    defaultValues,
   });
 
   function onSubmit(values: CreatePackageTemplateInput) {
@@ -46,7 +58,7 @@ export function NewPackageTemplateDialog() {
       try {
         await createPackageTemplate(values);
         setOpen(false);
-        form.reset({ name: "", sessions: 8, durationDays: 30, price: 0 });
+        form.reset(defaultValues);
         router.refresh();
         toast.success("Package type added.");
       } catch {
@@ -126,6 +138,35 @@ export function NewPackageTemplateDialog() {
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="section"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Applies to</FormLabel>
+                  <Select
+                    value={field.value ?? BOTH}
+                    onValueChange={(v) => field.onChange(v === BOTH ? null : v)}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue>{(v: string) => (v === BOTH ? "Both sections" : label(v))}</SelectValue>
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={BOTH}>Both sections</SelectItem>
+                      {SECTIONS.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {label(s)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <DialogFooter>
               <Button type="submit" disabled={isPending}>

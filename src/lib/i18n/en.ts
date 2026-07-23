@@ -113,6 +113,7 @@ export const en = {
     previous: "Previous",
     next: "Next",
     genderScanCapNote: "estimated gender filter only scans the most recent 2,000 leads",
+    exportCsv: "Export CSV",
   },
   leadsList: {
     selected: "selected",
@@ -154,6 +155,18 @@ export const en = {
     create: "Create Lead",
     creating: "Creating...",
     couldNotCreate: "Could not create lead.",
+  },
+  sendCampaignDialog: {
+    trigger: "Send WhatsApp Campaign",
+    title: "Send to {count} leads",
+    description: "Edit the message below, then send. This is logged on each lead's activity.",
+    cancel: "Cancel",
+    send: "Send to {count}",
+    sending: "Sending...",
+    sentResult: "Sent to {count} leads.",
+    simulatedResult: "Logged {count} messages (WhatsApp isn't connected yet — nothing was actually sent).",
+    failedResult: "Failed for {count} leads.",
+    couldNotSend: "Could not send campaign.",
   },
   myLeadsPage: {
     title: "My Leads",

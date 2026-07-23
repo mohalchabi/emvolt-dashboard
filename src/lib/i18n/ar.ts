@@ -115,6 +115,7 @@ export const ar: Dictionary = {
     previous: "السابق",
     next: "التالي",
     genderScanCapNote: "فلتر الجنس التقديري يفحص آخر 2000 عميل محتمل فقط",
+    exportCsv: "تصدير CSV",
   },
   leadsList: {
     selected: "محدد",
@@ -156,6 +157,18 @@ export const ar: Dictionary = {
     create: "إنشاء العميل المحتمل",
     creating: "جارٍ الإنشاء...",
     couldNotCreate: "تعذّر إنشاء العميل المحتمل.",
+  },
+  sendCampaignDialog: {
+    trigger: "إرسال حملة واتساب",
+    title: "الإرسال إلى {count} من العملاء المحتملين",
+    description: "عدّل الرسالة أدناه ثم أرسل. سيتم تسجيل ذلك في سجل نشاط كل عميل محتمل.",
+    cancel: "إلغاء",
+    send: "إرسال إلى {count}",
+    sending: "جارٍ الإرسال...",
+    sentResult: "تم الإرسال إلى {count} من العملاء المحتملين.",
+    simulatedResult: "تم تسجيل {count} رسالة (واتساب غير متصل بعد - لم يتم إرسال شيء فعلياً).",
+    failedResult: "فشل الإرسال لـ {count} من العملاء المحتملين.",
+    couldNotSend: "تعذّر إرسال الحملة.",
   },
   myLeadsPage: {
     title: "عملائي المحتملون",

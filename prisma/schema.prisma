@@ -86,6 +86,11 @@ model Client {
   email    String?
   section  String // male | female
   status   String  @default("active") // active | paused | churned
+  // How a walk-in signed up directly (not converted from a Lead) found the
+  // studio: social_media | website | google_maps | friend_or_family | other.
+  // Null for clients converted from a Lead (that lead already has its own
+  // `source`) and for older clients created before this field existed.
+  source   String?
   createdAt DateTime @default(now())
 
   convertedFromLeadId String? @unique
@@ -139,6 +144,7 @@ model PackageTemplate {
   sessions     Int
   durationDays Int // how many days a client has to use the sessions
   price        Float
+  section      String? // "male" | "female" | null (null = offered to both sections)
   active       Boolean  @default(true) // inactive templates stay for history but drop out of the picker
   createdAt    DateTime @default(now())
 
@@ -157,6 +163,8 @@ model Package {
   // Required whenever the charged price differs from the template's listed
   // price (an offer/discount) — keeps every non-standard sale explainable.
   priceOverrideReason String?
+  // mada | visa | tabby. Null for packages sold before this field existed.
+  paymentMethod String?
   purchaseDate  DateTime  @default(now())
   expiryDate    DateTime?
   // Set when the client taps "Request Renewal" in the portal; cleared when

@@ -1,5 +1,6 @@
 import { NewPackageDialog } from "@/components/clients/new-package-dialog";
 import { packageBalances } from "@/lib/package-balance";
+import { label } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,14 +8,19 @@ import type { Package } from "@/generated/prisma/client";
 
 export async function PackagesPanel({
   clientId,
+  section,
   packages,
 }: {
   clientId: string;
+  section: string;
   packages: Package[];
 }) {
   const [balances, templates] = await Promise.all([
     packageBalances(packages),
-    prisma.packageTemplate.findMany({ where: { active: true }, orderBy: [{ name: "asc" }, { sessions: "asc" }] }),
+    prisma.packageTemplate.findMany({
+      where: { active: true, OR: [{ section: null }, { section }] },
+      orderBy: [{ name: "asc" }, { sessions: "asc" }],
+    }),
   ]);
 
   return (
@@ -55,6 +61,7 @@ export async function PackagesPanel({
               <div className="text-xs text-muted-foreground">
                 Purchased {pkg.purchaseDate.toLocaleDateString()}
                 {pkg.expiryDate ? ` · Expires ${pkg.expiryDate.toLocaleDateString()}` : ""}
+                {pkg.paymentMethod ? ` · Paid via ${label(pkg.paymentMethod)}` : ""}
               </div>
               {pkg.priceOverrideReason && (
                 <div className="text-xs text-amber-400">Price override: {pkg.priceOverrideReason}</div>

@@ -15,6 +15,20 @@ export const LEAD_SOURCES = [
 ] as const;
 export type LeadSource = (typeof LEAD_SOURCES)[number];
 
+// How a walk-in client (added directly by staff, not converted from a Lead)
+// found the studio.
+export const CLIENT_SOURCES = [
+  "social_media",
+  "website",
+  "google_maps",
+  "friend_or_family",
+  "other",
+] as const;
+export type ClientSource = (typeof CLIENT_SOURCES)[number];
+
+export const PAYMENT_METHODS = ["mada", "visa", "tabby"] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
 export const TRAINING_TYPES = ["ems", "pilates", "pt"] as const;
 export type TrainingType = (typeof TRAINING_TYPES)[number];
 
@@ -83,6 +97,13 @@ export const LABELS: Record<string, string> = {
   whatsapp: "WhatsApp",
   bulk_import: "Bulk Import",
   other: "Other",
+  social_media: "Social Media",
+  website: "Website",
+  google_maps: "Google Maps",
+  friend_or_family: "Friend or Family",
+  mada: "mada",
+  visa: "Visa",
+  tabby: "Tabby",
   ems: "EMS",
   pilates: "Pilates",
   pt: "Personal Training",
@@ -128,6 +149,13 @@ export const LABELS_AR: Record<string, string> = {
   whatsapp: "واتساب",
   bulk_import: "استيراد جماعي",
   other: "أخرى",
+  social_media: "وسائل التواصل الاجتماعي",
+  website: "الموقع الإلكتروني",
+  google_maps: "خرائط جوجل",
+  friend_or_family: "صديق أو أحد أفراد العائلة",
+  mada: "مدى",
+  visa: "فيزا",
+  tabby: "تابي",
   ems: "EMS",
   pilates: "بيلاتس",
   pt: "تدريب شخصي",

@@ -32,93 +32,179 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createPackageSchema, type CreatePackageInput } from "@/lib/schemas/client";
-import { createPackage } from "@/lib/actions/clients";
-import { PAYMENT_METHODS, label } from "@/lib/constants";
+import { createWalkInClientSchema, type CreateWalkInClientInput } from "@/lib/schemas/client";
+import { createWalkInClient } from "@/lib/actions/clients";
+import { SECTIONS, CLIENT_SOURCES, PAYMENT_METHODS, label } from "@/lib/constants";
 import type { PackageTemplate } from "@/generated/prisma/client";
 
 const CUSTOM = "custom";
 const DISCOUNT_RATE = 0.45;
 
-export function NewPackageDialog({
-  clientId,
-  templates,
-}: {
-  clientId: string;
-  templates: PackageTemplate[];
-}) {
+export function NewWalkInClientDialog({ templates }: { templates: PackageTemplate[] }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [templateChoice, setTemplateChoice] = useState<string>(templates[0]?.id ?? CUSTOM);
+  const [templateChoice, setTemplateChoice] = useState<string>(CUSTOM);
   const router = useRouter();
 
-  const selectedTemplate = templates.find((t) => t.id === templateChoice) ?? null;
-
-  const form = useForm<z.input<typeof createPackageSchema>, unknown, CreatePackageInput>({
-    resolver: zodResolver(createPackageSchema),
-    defaultValues: {
-      clientId,
-      templateId: selectedTemplate?.id ?? null,
-      name: selectedTemplate?.name ?? "",
-      totalSessions: selectedTemplate?.sessions ?? 12,
-      price: selectedTemplate?.price ?? 0,
-      priceOverrideReason: "",
-      expiryDate: null,
-      paymentMethod: null,
-    },
+  const defaults = (t: PackageTemplate | null) => ({
+    name: "",
+    phone: "",
+    email: "",
+    section: "male" as const,
+    source: undefined,
+    templateId: t?.id ?? null,
+    packageName: t?.name ?? "",
+    totalSessions: t?.sessions ?? 12,
+    price: t?.price ?? 0,
+    priceOverrideReason: "",
+    paymentMethod: undefined,
   });
 
+  const form = useForm<z.input<typeof createWalkInClientSchema>, unknown, CreateWalkInClientInput>({
+    resolver: zodResolver(createWalkInClientSchema),
+    defaultValues: defaults(null),
+  });
+
+  const watchedSection = form.watch("section");
+  const availableTemplates = templates.filter((t) => !t.section || t.section === watchedSection);
+  const selectedTemplate = availableTemplates.find((t) => t.id === templateChoice) ?? null;
+
   const watchedPrice = form.watch("price");
-  const priceDiffersFromTemplate =
-    !!selectedTemplate && Number(watchedPrice) !== selectedTemplate.price;
+  const priceDiffersFromTemplate = !!selectedTemplate && Number(watchedPrice) !== selectedTemplate.price;
 
   function applyDiscount() {
     if (!selectedTemplate) return;
-    form.setValue("price", Math.round(selectedTemplate.price * (1 - DISCOUNT_RATE)), {
-      shouldValidate: true,
-    });
+    form.setValue("price", Math.round(selectedTemplate.price * (1 - DISCOUNT_RATE)), { shouldValidate: true });
     form.setValue("priceOverrideReason", "45% special offer", { shouldValidate: true });
   }
 
   function onTemplateChange(value: string) {
     setTemplateChoice(value);
-    const t = templates.find((x) => x.id === value) ?? null;
-    form.reset({
-      clientId,
-      templateId: t?.id ?? null,
-      name: t?.name ?? "",
-      totalSessions: t?.sessions ?? 12,
-      price: t?.price ?? 0,
-      priceOverrideReason: "",
-      expiryDate: null,
-      paymentMethod: form.getValues("paymentMethod"),
-    });
+    const t = availableTemplates.find((x) => x.id === value) ?? null;
+    const current = form.getValues();
+    form.reset({ ...defaults(t), name: current.name, phone: current.phone, email: current.email, section: current.section, source: current.source });
   }
 
-  function onSubmit(values: CreatePackageInput) {
+  function onSectionChange(value: "male" | "female" | null) {
+    if (!value) return;
+    form.setValue("section", value);
+    if (selectedTemplate && selectedTemplate.section && selectedTemplate.section !== value) {
+      setTemplateChoice(CUSTOM);
+      const current = form.getValues();
+      form.reset({ ...defaults(null), name: current.name, phone: current.phone, email: current.email, section: value, source: current.source });
+    }
+  }
+
+  function onSubmit(values: CreateWalkInClientInput) {
     startTransition(async () => {
       try {
-        await createPackage({ ...values, clientId });
+        const client = await createWalkInClient(values);
+        toast.success("Client added.");
         setOpen(false);
-        onTemplateChange(templates[0]?.id ?? CUSTOM);
-        router.refresh();
+        form.reset(defaults(null));
+        setTemplateChoice(CUSTOM);
+        router.push(`/clients/${client.id}`);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not add package.");
+        toast.error(err instanceof Error ? err.message : "Could not add client.");
       }
     });
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="secondary">Add Package</Button>} />
+      <DialogTrigger render={<Button>New Client</Button>} />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Package</DialogTitle>
-          <DialogDescription>Record a new session package purchase for this client.</DialogDescription>
+          <DialogTitle>New Client</DialogTitle>
+          <DialogDescription>
+            Sign up a walk-in who wasn&apos;t already a lead &mdash; their info, how they heard about us, and
+            their first package purchase.
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-1">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Full name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone</FormLabel>
+                  <FormControl>
+                    <Input placeholder="+9665xxxxxxxx" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="section"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Section</FormLabel>
+                    <Select value={field.value} onValueChange={onSectionChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue>{(v: string) => label(v)}</SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {SECTIONS.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {label(s)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="source"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>How did they hear about us?</FormLabel>
+                    <Select value={field.value ?? undefined} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Choose...">{(v: string) => label(v)}</SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CLIENT_SOURCES.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {label(s)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="h-px bg-border" />
+
             <FormItem>
               <FormLabel>Package type</FormLabel>
               <Select value={templateChoice} onValueChange={(v) => v && onTemplateChange(v)}>
@@ -129,7 +215,7 @@ export function NewPackageDialog({
                         v === CUSTOM
                           ? "Custom package"
                           : (() => {
-                              const t = templates.find((x) => x.id === v);
+                              const t = availableTemplates.find((x) => x.id === v);
                               return t ? `${t.name} — ${t.sessions} sessions — ${t.price.toLocaleString()} SAR` : v;
                             })()
                       }
@@ -137,7 +223,7 @@ export function NewPackageDialog({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {templates.map((t) => (
+                  {availableTemplates.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.name} — {t.sessions} sessions — {t.durationDays} days — {t.price.toLocaleString()} SAR
                     </SelectItem>
@@ -149,7 +235,7 @@ export function NewPackageDialog({
 
             <FormField
               control={form.control}
-              name="name"
+              name="packageName"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Package name</FormLabel>
@@ -201,7 +287,6 @@ export function NewPackageDialog({
               <FormField
                 control={form.control}
                 name="priceOverrideReason"
-                rules={{ required: true }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Reason for price change</FormLabel>
@@ -218,33 +303,12 @@ export function NewPackageDialog({
               />
             )}
 
-            {selectedTemplate ? (
-              <p className="text-xs text-muted-foreground">
-                Sessions must be used within {selectedTemplate.durationDays} days of purchase — the
-                expiry date is set automatically.
-              </p>
-            ) : (
-              <FormField
-                control={form.control}
-                name="expiryDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Expiry date (optional)</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} value={field.value ?? ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
             <FormField
               control={form.control}
               name="paymentMethod"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Paid via (optional)</FormLabel>
+                  <FormLabel>Paid via</FormLabel>
                   <Select value={field.value ?? undefined} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger className="w-full">
@@ -269,7 +333,7 @@ export function NewPackageDialog({
                 type="submit"
                 disabled={isPending || (priceDiffersFromTemplate && !form.watch("priceOverrideReason")?.trim())}
               >
-                {isPending ? "Adding..." : "Add Package"}
+                {isPending ? "Adding..." : "Add Client"}
               </Button>
             </DialogFooter>
           </form>
