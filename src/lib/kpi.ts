@@ -188,6 +188,35 @@ export async function getRenewalAlerts(trainerId?: string) {
     .sort((a, b) => a.balance.remaining - b.balance.remaining);
 }
 
+// Every staff action that touches a lead or client already writes an
+// ActivityLog row (lead/client created, contacted, status changed, package
+// sold, etc.) — this just surfaces the most recent of those org-wide so
+// admins can see what trainers and front desk are doing without having to
+// open each lead/client individually.
+export async function getRecentActivity(limit = 15) {
+  const logs = await prisma.activityLog.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    include: {
+      author: true,
+      lead: { select: { id: true, name: true } },
+      client: { select: { id: true, name: true } },
+    },
+  });
+
+  return logs.map((log) => ({
+    id: log.id,
+    authorName: log.author.name,
+    text: log.text,
+    createdAt: log.createdAt,
+    target: log.lead
+      ? { type: "lead" as const, id: log.lead.id, name: log.lead.name }
+      : log.client
+        ? { type: "client" as const, id: log.client.id, name: log.client.name }
+        : null,
+  }));
+}
+
 export async function getTrainerUtilization() {
   const now = new Date();
   const start = startOfWeek(now, { weekStartsOn: 0 });

@@ -72,6 +72,10 @@ export const ar: Dictionary = {
     noClientsLow: "لا يوجد عملاء بجلسات منخفضة.",
     left: "متبقية",
   },
+  recentActivity: {
+    title: "النشاط الأخير",
+    noActivityYet: "لا يوجد نشاط بعد.",
+  },
   staffLeaderboard: {
     title: "لوحة أداء الموظفين",
     noLeadsAssignedYet: "لا يوجد عملاء محتملون معيّنون بعد.",

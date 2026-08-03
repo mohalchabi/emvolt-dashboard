@@ -16,6 +16,7 @@ import {
   type SendLeadCampaignInput,
 } from "@/lib/schemas/lead";
 import { logContactAttemptSchema, type LogContactAttemptInput } from "@/lib/schemas/contact";
+import { sendSms } from "@/lib/notify/unifonic-sms";
 import { isWhatsappConfigured, sendWhatsappMessage } from "@/lib/notify/whatsapp";
 
 // Full lead-list browsing and distribution is admin-only; everyone else may
@@ -100,7 +101,7 @@ export async function assignLead(input: { leadId: string; assignedStaffId: strin
     ? await prisma.staff.findUnique({ where: { id: data.assignedStaffId } })
     : null;
 
-  await prisma.lead.update({
+  const lead = await prisma.lead.update({
     where: { id: data.leadId },
     data: { assignedStaffId: data.assignedStaffId },
   });
@@ -112,6 +113,13 @@ export async function assignLead(input: { leadId: string; assignedStaffId: strin
       text: staff ? `Assigned to ${staff.name}.` : `Unassigned.`,
     },
   });
+
+  if (staff?.phone) {
+    await sendSms(
+      staff.phone,
+      `New lead assigned to you: ${lead.name} (${lead.phone}). Open the app to reach out.`
+    ).catch((err) => console.error(`Failed to SMS ${staff.phone} about lead assignment:`, err));
+  }
 
   revalidatePath("/leads");
   revalidatePath("/my-leads");
@@ -137,6 +145,14 @@ export async function bulkAssignLeads(input: { leadIds: string[]; staffId: strin
       })),
     }),
   ]);
+
+  if (staff.phone) {
+    const count = input.leadIds.length;
+    await sendSms(
+      staff.phone,
+      `${count} new lead${count === 1 ? "" : "s"} assigned to you. Open the app to start reaching out.`
+    ).catch((err) => console.error(`Failed to SMS ${staff.phone} about bulk lead assignment:`, err));
+  }
 
   revalidatePath("/leads");
   revalidatePath("/my-leads");

@@ -11,6 +11,7 @@ import { PackagesPanel } from "@/components/clients/packages-panel";
 import { InbodyPanel } from "@/components/clients/inbody-panel";
 import { MessagesPanel } from "@/components/clients/messages-panel";
 import { BookSessionDialog } from "@/components/clients/book-session-dialog";
+import { PreviewAsClientButton } from "@/components/clients/preview-as-client-button";
 
 const SESSION_STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   scheduled: "outline",
@@ -75,9 +76,10 @@ export default async function ClientDetailPage({
         <Link href={backHref} className="text-sm text-muted-foreground hover:underline">
           &larr; Back to {canManage ? "Clients" : "My Clients"}
         </Link>
-        <div className="mt-1 flex items-center gap-3">
+        <div className="mt-1 flex flex-wrap items-center gap-3">
           <h1 className="font-heading text-2xl font-semibold tracking-tight">{client.name}</h1>
           <Badge variant="outline">{label(client.section)}</Badge>
+          {session.user.role === "admin" && <PreviewAsClientButton clientId={client.id} />}
         </div>
         <p className="text-sm text-muted-foreground">
           {client.phone}
