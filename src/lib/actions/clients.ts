@@ -6,7 +6,7 @@ import { requireSession } from "@/lib/auth-helpers";
 import { label } from "@/lib/constants";
 import { addNoteSchema } from "@/lib/schemas/lead";
 import { packageBalances } from "@/lib/package-balance";
-import { isSlotAvailable, DEFAULT_SESSION_DURATION } from "@/lib/portal-availability";
+import { isSlotAvailable, overlaps, DEFAULT_SESSION_DURATION } from "@/lib/portal-availability";
 import {
   createClientSchema,
   updateClientStatusSchema,
@@ -19,6 +19,50 @@ import {
   type BookClientSessionInput,
   type CreateWalkInClientInput,
 } from "@/lib/schemas/client";
+
+// Validates a batch of upfront session datetimes for one package purchase —
+// none in the past, none overlapping each other, none conflicting with the
+// trainer's existing schedule — and returns ready-to-insert Session data
+// (still missing clientId/packageId, added by the caller).
+async function prepareSessionRows({
+  trainerId,
+  type,
+  datetimes,
+}: {
+  trainerId: string;
+  type: string;
+  datetimes: string[];
+}) {
+  if (datetimes.length === 0) return [];
+
+  const parsed = datetimes.map((d) => new Date(d));
+  for (const dt of parsed) {
+    if (Number.isNaN(dt.getTime()) || dt <= new Date()) {
+      throw new Error("Pick a time in the future for every scheduled session.");
+    }
+  }
+
+  const sorted = [...parsed].sort((a, b) => a.getTime() - b.getTime());
+  for (let i = 1; i < sorted.length; i++) {
+    if (overlaps(sorted[i - 1], DEFAULT_SESSION_DURATION, sorted[i], DEFAULT_SESSION_DURATION)) {
+      throw new Error("Two of the session times you picked overlap each other — pick different times.");
+    }
+  }
+
+  for (const dt of parsed) {
+    if (!(await isSlotAvailable(trainerId, dt))) {
+      throw new Error(`The trainer already has a session at ${dt.toLocaleString()} — pick another time.`);
+    }
+  }
+
+  return parsed.map((dt) => ({
+    trainerId,
+    type,
+    datetime: dt,
+    duration: DEFAULT_SESSION_DURATION,
+    status: "scheduled" as const,
+  }));
+}
 
 export async function createClient(input: CreateClientInput) {
   const session = await requireSession();
@@ -113,6 +157,21 @@ export async function createPackage(input: CreatePackageInput) {
     throw new Error("A reason is required when the price differs from the package type's listed price.");
   }
 
+  const sessionDates = data.sessionDates?.filter(Boolean) ?? [];
+  let sessionRows: Awaited<ReturnType<typeof prepareSessionRows>> = [];
+  if (sessionDates.length > 0) {
+    const client = await prisma.client.findUnique({ where: { id: data.clientId } });
+    if (!client) throw new Error("Could not find that client.");
+    if (!client.assignedTrainerId) {
+      throw new Error("Assign a trainer to this client before scheduling sessions.");
+    }
+    sessionRows = await prepareSessionRows({
+      trainerId: client.assignedTrainerId,
+      type: data.sessionType ?? "pt",
+      datetimes: sessionDates,
+    });
+  }
+
   const purchaseDate = new Date();
   const expiryDate = data.expiryDate
     ? new Date(data.expiryDate)
@@ -134,14 +193,21 @@ export async function createPackage(input: CreatePackageInput) {
     },
   });
 
+  if (sessionRows.length > 0) {
+    await prisma.session.createMany({
+      data: sessionRows.map((r) => ({ ...r, clientId: data.clientId, packageId: pkg.id })),
+    });
+  }
+
   const priceNote =
     pkg.priceOverrideReason ? ` at ${pkg.price} SAR (${pkg.priceOverrideReason})` : "";
   const paymentNote = pkg.paymentMethod ? ` — paid via ${label(pkg.paymentMethod)}` : "";
+  const scheduleNote = sessionRows.length > 0 ? ` — ${sessionRows.length} session(s) scheduled` : "";
   await prisma.activityLog.create({
     data: {
       clientId: data.clientId,
       authorId: session.user.id,
-      text: `Purchased ${data.name} (${data.totalSessions} sessions)${priceNote}${paymentNote}.`,
+      text: `Purchased ${data.name} (${data.totalSessions} sessions)${priceNote}${paymentNote}${scheduleNote}.`,
     },
   });
 
@@ -154,6 +220,10 @@ export async function createPackage(input: CreatePackageInput) {
 
   revalidatePath(`/clients/${data.clientId}`);
   revalidatePath("/clients");
+  if (sessionRows.length > 0) {
+    revalidatePath("/my-clients");
+    revalidatePath("/calendar");
+  }
   return pkg;
 }
 
@@ -176,6 +246,19 @@ export async function createWalkInClient(input: CreateWalkInClientInput) {
   const assignedTrainerId = session.user.role === "trainer" ? session.user.id : null;
   const purchaseDate = new Date();
   const expiryDate = template ? new Date(purchaseDate.getTime() + template.durationDays * 24 * 60 * 60 * 1000) : null;
+
+  const sessionDates = data.sessionDates?.filter(Boolean) ?? [];
+  let sessionRows: Awaited<ReturnType<typeof prepareSessionRows>> = [];
+  if (sessionDates.length > 0) {
+    if (!assignedTrainerId) {
+      throw new Error("Only a trainer signing the client up under themselves can schedule sessions here.");
+    }
+    sessionRows = await prepareSessionRows({
+      trainerId: assignedTrainerId,
+      type: data.sessionType ?? "pt",
+      datetimes: sessionDates,
+    });
+  }
 
   const client = await prisma.$transaction(async (tx) => {
     const newClient = await tx.client.create({
@@ -207,12 +290,19 @@ export async function createWalkInClient(input: CreateWalkInClientInput) {
       data: { clientId: newClient.id, authorId: session.user.id, text: `Client added (walk-in, via ${label(data.source)}).` },
     });
 
+    if (sessionRows.length > 0) {
+      await tx.session.createMany({
+        data: sessionRows.map((r) => ({ ...r, clientId: newClient.id, packageId: pkg.id })),
+      });
+    }
+
     const priceNote = pkg.priceOverrideReason ? ` at ${pkg.price} SAR (${pkg.priceOverrideReason})` : "";
+    const scheduleNote = sessionRows.length > 0 ? ` — ${sessionRows.length} session(s) scheduled` : "";
     await tx.activityLog.create({
       data: {
         clientId: newClient.id,
         authorId: session.user.id,
-        text: `Purchased ${pkg.name} (${pkg.totalSessions} sessions)${priceNote} — paid via ${label(data.paymentMethod)}.`,
+        text: `Purchased ${pkg.name} (${pkg.totalSessions} sessions)${priceNote} — paid via ${label(data.paymentMethod)}${scheduleNote}.`,
       },
     });
 
@@ -222,6 +312,9 @@ export async function createWalkInClient(input: CreateWalkInClientInput) {
   revalidatePath("/clients");
   revalidatePath("/my-clients");
   revalidatePath(`/clients/${client.id}`);
+  if (sessionRows.length > 0) {
+    revalidatePath("/calendar");
+  }
   return client;
 }
 

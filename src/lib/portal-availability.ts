@@ -3,7 +3,7 @@ import { OPERATING_HOURS, CALENDAR_SLOT_MINUTES } from "@/lib/constants";
 
 export const DEFAULT_SESSION_DURATION = 20; // minutes — matches Session.duration's default everywhere else
 
-function overlaps(aStart: Date, aDuration: number, bStart: Date, bDuration: number) {
+export function overlaps(aStart: Date, aDuration: number, bStart: Date, bDuration: number) {
   const aEnd = aStart.getTime() + aDuration * 60_000;
   const bEnd = bStart.getTime() + bDuration * 60_000;
   return aStart.getTime() < bEnd && bStart.getTime() < aEnd;

@@ -32,6 +32,11 @@ export const createPackageSchema = z.object({
   priceOverrideReason: z.string().optional().nullable(),
   expiryDate: z.string().optional().nullable(),
   paymentMethod: z.enum(PAYMENT_METHODS).optional().nullable(),
+  // Optional upfront scheduling — one datetime ("YYYY-MM-DDTHH:mm") per
+  // session the trainer wants to book right away; the rest can be booked
+  // later from the client's profile.
+  sessionType: z.enum(TRAINING_TYPES).optional().nullable(),
+  sessionDates: z.array(z.string()).optional(),
 });
 export type CreatePackageInput = z.infer<typeof createPackageSchema>;
 
@@ -50,6 +55,8 @@ export const createWalkInClientSchema = z.object({
   price: z.coerce.number().min(0, "Price can't be negative"),
   priceOverrideReason: z.string().optional().nullable(),
   paymentMethod: z.enum(PAYMENT_METHODS),
+  sessionType: z.enum(TRAINING_TYPES).optional().nullable(),
+  sessionDates: z.array(z.string()).optional(),
 });
 export type CreateWalkInClientInput = z.infer<typeof createWalkInClientSchema>;
 

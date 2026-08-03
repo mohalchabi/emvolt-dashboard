@@ -1,12 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import type { z } from "zod";
 import { Button } from "@/components/ui/button";
+import {
+  SessionDatesFields,
+  emptySlots,
+  filledDatetimes,
+  type SessionSlot,
+} from "@/components/clients/session-dates-fields";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +40,7 @@ import {
 } from "@/components/ui/select";
 import { createPackageSchema, type CreatePackageInput } from "@/lib/schemas/client";
 import { createPackage } from "@/lib/actions/clients";
-import { PAYMENT_METHODS, label } from "@/lib/constants";
+import { PAYMENT_METHODS, label, type TrainingType } from "@/lib/constants";
 import type { PackageTemplate } from "@/generated/prisma/client";
 
 const CUSTOM = "custom";
@@ -50,6 +56,9 @@ export function NewPackageDialog({
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [templateChoice, setTemplateChoice] = useState<string>(templates[0]?.id ?? CUSTOM);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [sessionType, setSessionType] = useState<TrainingType>("pt");
+  const [slots, setSlots] = useState<SessionSlot[]>(emptySlots(templates[0]?.sessions ?? 12));
   const router = useRouter();
 
   const selectedTemplate = templates.find((t) => t.id === templateChoice) ?? null;
@@ -69,8 +78,18 @@ export function NewPackageDialog({
   });
 
   const watchedPrice = form.watch("price");
+  const watchedTotalSessions = form.watch("totalSessions");
   const priceDiffersFromTemplate =
     !!selectedTemplate && Number(watchedPrice) !== selectedTemplate.price;
+
+  useEffect(() => {
+    const n = Number(watchedTotalSessions) || 0;
+    setSlots((prev) => {
+      if (n === prev.length) return prev;
+      if (n < prev.length) return prev.slice(0, n);
+      return [...prev, ...emptySlots(n - prev.length)];
+    });
+  }, [watchedTotalSessions]);
 
   function applyDiscount() {
     if (!selectedTemplate) return;
@@ -98,9 +117,16 @@ export function NewPackageDialog({
   function onSubmit(values: CreatePackageInput) {
     startTransition(async () => {
       try {
-        await createPackage({ ...values, clientId });
+        await createPackage({
+          ...values,
+          clientId,
+          sessionType: scheduleEnabled ? sessionType : null,
+          sessionDates: scheduleEnabled ? filledDatetimes(slots) : [],
+        });
         setOpen(false);
         onTemplateChange(templates[0]?.id ?? CUSTOM);
+        setScheduleEnabled(false);
+        setSlots(emptySlots(templates[0]?.sessions ?? 12));
         router.refresh();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Could not add package.");
@@ -139,7 +165,12 @@ export function NewPackageDialog({
                 <SelectContent>
                   {templates.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
-                      {t.name} — {t.sessions} sessions — {t.durationDays} days — {t.price.toLocaleString()} SAR
+                      <span className="flex min-w-0 flex-col whitespace-normal py-0.5">
+                        <span className="truncate font-medium">{t.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {t.sessions} sessions · {t.durationDays} days · {t.price.toLocaleString()} SAR
+                        </span>
+                      </span>
                     </SelectItem>
                   ))}
                   <SelectItem value={CUSTOM}>Custom package</SelectItem>
@@ -262,6 +293,16 @@ export function NewPackageDialog({
                   <FormMessage />
                 </FormItem>
               )}
+            />
+
+            <SessionDatesFields
+              enabled={scheduleEnabled}
+              onEnabledChange={setScheduleEnabled}
+              totalSessions={Number(watchedTotalSessions) || 0}
+              sessionType={sessionType}
+              onSessionTypeChange={setSessionType}
+              slots={slots}
+              onSlotsChange={setSlots}
             />
 
             <DialogFooter>
