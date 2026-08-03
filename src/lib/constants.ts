@@ -134,6 +134,8 @@ export const LABELS: Record<string, string> = {
   interested_later: "Interested — follow up later",
   declined: "Not interested",
   booked_trial: "Booked a trial",
+  contract: "Contract",
+  id_document: "ID Document",
 };
 
 export const LABELS_AR: Record<string, string> = {
@@ -186,6 +188,8 @@ export const LABELS_AR: Record<string, string> = {
   interested_later: "مهتم - متابعة لاحقاً",
   declined: "غير مهتم",
   booked_trial: "تم حجز تجربة",
+  contract: "العقد",
+  id_document: "وثيقة الهوية",
 };
 
 export function label(value: string, locale: "en" | "ar" = "en"): string {

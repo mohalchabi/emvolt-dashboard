@@ -12,6 +12,7 @@ import { InbodyPanel } from "@/components/clients/inbody-panel";
 import { MessagesPanel } from "@/components/clients/messages-panel";
 import { BookSessionDialog } from "@/components/clients/book-session-dialog";
 import { PreviewAsClientButton } from "@/components/clients/preview-as-client-button";
+import { DocumentsPanel } from "@/components/clients/documents-panel";
 
 const SESSION_STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   scheduled: "outline",
@@ -38,7 +39,7 @@ export default async function ClientDetailPage({
   const isOwnTrainer = session.user.role === "trainer" && client.assignedTrainerId === session.user.id;
   if (!canManage && !isOwnTrainer) redirect("/");
 
-  const [trainers, logs, sessions, inBodyResults, messages] = await Promise.all([
+  const [trainers, logs, sessions, inBodyResults, messages, documents] = await Promise.all([
     prisma.staff.findMany({ where: { active: true, role: "trainer" }, orderBy: { name: "asc" } }),
     prisma.activityLog.findMany({
       where: { clientId: id },
@@ -59,6 +60,11 @@ export default async function ClientDetailPage({
       where: { clientId: id },
       include: { authorStaff: true },
       orderBy: { createdAt: "asc" },
+    }),
+    prisma.clientDocument.findMany({
+      where: { clientId: id },
+      include: { uploadedBy: true },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
 
@@ -85,6 +91,7 @@ export default async function ClientDetailPage({
           {client.phone}
           {client.email ? ` · ${client.email}` : ""} · client since {client.createdAt.toLocaleDateString()}
           {client.source ? ` · via ${label(client.source)}` : ""}
+          {client.idNumber ? ` · ID ${client.idNumber}` : ""}
         </p>
         {client.convertedFromLead && (
           <p className="mt-1 text-sm">
@@ -103,6 +110,11 @@ export default async function ClientDetailPage({
         <div className="flex flex-col gap-6">
           <PackagesPanel clientId={client.id} section={client.section} packages={client.packages} />
           <InbodyPanel clientId={client.id} results={inBodyResults} />
+          <DocumentsPanel
+            clientId={client.id}
+            contracts={documents.filter((d) => d.type === "contract")}
+            idDocuments={documents.filter((d) => d.type === "id_document")}
+          />
           <MessagesPanel clientId={client.id} clientName={client.name} messages={messages} />
 
           <Card>

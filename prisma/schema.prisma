@@ -33,6 +33,7 @@ model Staff {
   contactAttempts  LeadContactAttempt[]  @relation("ContactAttemptStaff")
   inBodyResults    InBodyResult[]        @relation("InBodyResultUploadedBy")
   messages         Message[]             @relation("MessageAuthorStaff")
+  clientDocuments  ClientDocument[]      @relation("ClientDocumentUploadedBy")
 }
 
 model Lead {
@@ -91,6 +92,7 @@ model Client {
   // Null for clients converted from a Lead (that lead already has its own
   // `source`) and for older clients created before this field existed.
   source   String?
+  idNumber String? // Iqama / national ID number
   createdAt DateTime @default(now())
 
   convertedFromLeadId String? @unique
@@ -105,6 +107,7 @@ model Client {
   activityLogs   ActivityLog[]   @relation("ActivityLogClient")
   inBodyResults  InBodyResult[]  @relation("InBodyResultClient")
   messages       Message[]       @relation("MessageClient")
+  documents      ClientDocument[] @relation("ClientDocumentClient")
 
   @@index([status])
   @@index([assignedTrainerId])
@@ -187,6 +190,23 @@ model InBodyResult {
   takenAt      DateTime // date of the actual scan, may differ from upload time
   uploadedById String
   uploadedBy   Staff    @relation("InBodyResultUploadedBy", fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([clientId])
+}
+
+// Signed EmVolt contracts and Iqama/national ID copies. One client can have
+// several of either type over time (renewed contract, renewed Iqama) — old
+// ones are kept for history rather than being overwritten.
+model ClientDocument {
+  id           String   @id @default(cuid())
+  clientId     String
+  client       Client   @relation("ClientDocumentClient", fields: [clientId], references: [id])
+  type         String // "contract" | "id_document"
+  fileUrl      String
+  fileName     String
+  uploadedById String
+  uploadedBy   Staff    @relation("ClientDocumentUploadedBy", fields: [uploadedById], references: [id])
   createdAt    DateTime @default(now())
 
   @@index([clientId])
