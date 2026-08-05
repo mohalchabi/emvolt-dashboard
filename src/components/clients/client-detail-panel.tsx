@@ -11,11 +11,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { CLIENT_STATUSES, label } from "@/lib/constants";
 import { updateClientStatus, assignTrainer, addClientNote } from "@/lib/actions/clients";
+import { updateClientIdNumber } from "@/lib/actions/documents";
 import type { Staff, ActivityLog, Client } from "@/generated/prisma/client";
 
 type Props = {
@@ -48,6 +50,19 @@ export function ClientDetailPanel({ client, trainers, logs, canManage }: Props) 
         router.refresh();
       } catch {
         toast.error("Could not reassign trainer.");
+      }
+    });
+  }
+
+  function onIdNumberBlur(e: React.FocusEvent<HTMLInputElement>) {
+    const value = e.target.value.trim();
+    if (value === (client.idNumber ?? "")) return;
+    startTransition(async () => {
+      try {
+        await updateClientIdNumber({ clientId: client.id, idNumber: value });
+        router.refresh();
+      } catch {
+        toast.error("Could not update ID number.");
       }
     });
   }
@@ -109,6 +124,18 @@ export function ClientDetailPanel({ client, trainers, logs, canManage }: Props) 
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <Label htmlFor="idNumber">Iqama / National ID number</Label>
+            <Input
+              id="idNumber"
+              key={client.idNumber}
+              defaultValue={client.idNumber ?? ""}
+              onBlur={onIdNumberBlur}
+              disabled={isPending}
+              placeholder="e.g. 1234567890"
+            />
           </div>
         </CardContent>
       </Card>

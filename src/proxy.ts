@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 
-// /api/inbody does its own dual auth check (staff session OR client session
-// owning the result) rather than the staff-only check below — see
-// src/app/api/inbody/[id]/route.ts.
-const PUBLIC_PATHS = ["/dev-login", "/login", "/api/auth", "/api/webhooks", "/api/inbody"];
+// /api/inbody and /api/documents do their own dual auth check (staff session
+// OR client session owning the record) rather than the staff-only check
+// below — see src/app/api/inbody/[id]/route.ts and
+// src/app/api/documents/[id]/route.ts. /api/cron is called by Vercel Cron (no
+// session cookie) and checks its own CRON_SECRET bearer token instead — see
+// src/app/api/cron/trainer-reminders/route.ts.
+const PUBLIC_PATHS = ["/dev-login", "/login", "/api/auth", "/api/webhooks", "/api/inbody", "/api/documents", "/api/cron"];
 
 // The customer portal is a separate app with its own auth (phone + OTP,
 // checked via requireClientSession() in src/app/portal/(app)/layout.tsx) —

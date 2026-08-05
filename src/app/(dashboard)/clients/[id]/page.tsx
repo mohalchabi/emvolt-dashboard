@@ -3,12 +3,16 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth-helpers";
 import { label } from "@/lib/constants";
+import { packageBalances } from "@/lib/package-balance";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientDetailPanel } from "@/components/clients/client-detail-panel";
 import { PackagesPanel } from "@/components/clients/packages-panel";
 import { InbodyPanel } from "@/components/clients/inbody-panel";
 import { MessagesPanel } from "@/components/clients/messages-panel";
+import { BookSessionDialog } from "@/components/clients/book-session-dialog";
+import { PreviewAsClientButton } from "@/components/clients/preview-as-client-button";
+import { DocumentsPanel } from "@/components/clients/documents-panel";
 
 const SESSION_STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   scheduled: "outline",
@@ -35,7 +39,7 @@ export default async function ClientDetailPage({
   const isOwnTrainer = session.user.role === "trainer" && client.assignedTrainerId === session.user.id;
   if (!canManage && !isOwnTrainer) redirect("/");
 
-  const [trainers, logs, sessions, inBodyResults, messages] = await Promise.all([
+  const [trainers, logs, sessions, inBodyResults, messages, documents] = await Promise.all([
     prisma.staff.findMany({ where: { active: true, role: "trainer" }, orderBy: { name: "asc" } }),
     prisma.activityLog.findMany({
       where: { clientId: id },
@@ -57,9 +61,20 @@ export default async function ClientDetailPage({
       include: { authorStaff: true },
       orderBy: { createdAt: "asc" },
     }),
+    prisma.clientDocument.findMany({
+      where: { clientId: id },
+      include: { uploadedBy: true },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   const backHref = canManage ? "/clients" : "/my-clients";
+
+  const activePackages = client.packages.filter((p) => !p.expiryDate || p.expiryDate > new Date());
+  const balances = await packageBalances(activePackages);
+  const eligiblePackages = activePackages
+    .map((p) => ({ id: p.id, name: p.name, remaining: balances.get(p.id)?.remaining ?? 0 }))
+    .filter((p) => p.remaining > 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -67,13 +82,16 @@ export default async function ClientDetailPage({
         <Link href={backHref} className="text-sm text-muted-foreground hover:underline">
           &larr; Back to {canManage ? "Clients" : "My Clients"}
         </Link>
-        <div className="mt-1 flex items-center gap-3">
+        <div className="mt-1 flex flex-wrap items-center gap-3">
           <h1 className="font-heading text-2xl font-semibold tracking-tight">{client.name}</h1>
           <Badge variant="outline">{label(client.section)}</Badge>
+          {session.user.role === "admin" && <PreviewAsClientButton clientId={client.id} />}
         </div>
         <p className="text-sm text-muted-foreground">
           {client.phone}
           {client.email ? ` · ${client.email}` : ""} · client since {client.createdAt.toLocaleDateString()}
+          {client.source ? ` · via ${label(client.source)}` : ""}
+          {client.idNumber ? ` · ID ${client.idNumber}` : ""}
         </p>
         {client.convertedFromLead && (
           <p className="mt-1 text-sm">
@@ -90,13 +108,19 @@ export default async function ClientDetailPage({
         </div>
 
         <div className="flex flex-col gap-6">
-          <PackagesPanel clientId={client.id} packages={client.packages} />
+          <PackagesPanel clientId={client.id} section={client.section} packages={client.packages} />
           <InbodyPanel clientId={client.id} results={inBodyResults} />
+          <DocumentsPanel
+            clientId={client.id}
+            contracts={documents.filter((d) => d.type === "contract")}
+            idDocuments={documents.filter((d) => d.type === "id_document")}
+          />
           <MessagesPanel clientId={client.id} clientName={client.name} messages={messages} />
 
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Recent Sessions</CardTitle>
+              <BookSessionDialog clientId={client.id} packages={eligiblePackages} />
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
               {sessions.map((s) => (

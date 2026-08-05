@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { STAFF_ROLES, SECTIONS, label } from "@/lib/constants";
+import { friendlyErrorMessage } from "@/lib/friendly-error";
 import {
   updateStaffRole,
   updateStaffSection,
@@ -42,8 +43,8 @@ export function StaffRoleSelect({ staff }: { staff: Staff }) {
       try {
         await updateStaffRole({ staffId: staff.id, role });
         router.refresh();
-      } catch {
-        toast.error("Could not update role.");
+      } catch (err) {
+        toast.error(friendlyErrorMessage(err, "Could not update role."));
       }
     });
   }
@@ -77,8 +78,8 @@ export function StaffSectionSelect({ staff }: { staff: Staff }) {
       try {
         await updateStaffSection({ staffId: staff.id, section });
         router.refresh();
-      } catch {
-        toast.error("Could not update section.");
+      } catch (err) {
+        toast.error(friendlyErrorMessage(err, "Could not update section."));
       }
     });
   }
@@ -112,8 +113,8 @@ export function StaffTargetInput({ staff }: { staff: Staff }) {
       try {
         await updateStaffTarget({ staffId: staff.id, leadTarget: value });
         router.refresh();
-      } catch {
-        toast.error("Could not update target.");
+      } catch (err) {
+        toast.error(friendlyErrorMessage(err, "Could not update target."));
       }
     });
   }
@@ -143,8 +144,8 @@ export function StaffPhoneInput({ staff }: { staff: Staff }) {
       try {
         await updateStaffPhone({ staffId: staff.id, phone: value });
         router.refresh();
-      } catch {
-        toast.error("Could not update phone.");
+      } catch (err) {
+        toast.error(friendlyErrorMessage(err, "Could not update phone."));
       }
     });
   }
@@ -164,10 +165,14 @@ export function StaffPhoneInput({ staff }: { staff: Staff }) {
 
 export function StaffDeleteButton({ staff, isSelf }: { staff: Staff; isSelf: boolean }) {
   const [open, setOpen] = useState(false);
+  // Set only when a delete attempt was blocked because the staff member has
+  // real history attached — switches the dialog to offering the one action
+  // that actually works (deactivate) instead of leaving admins at a dead end.
+  const [blocked, setBlocked] = useState(false);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  function onConfirm() {
+  function onConfirmDelete() {
     startTransition(async () => {
       try {
         await deleteStaff({ staffId: staff.id });
@@ -175,13 +180,36 @@ export function StaffDeleteButton({ staff, isSelf }: { staff: Staff; isSelf: boo
         router.refresh();
         toast.success(`${staff.name} deleted.`);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not delete staff member.");
+        if (err instanceof Error && err.message.includes("deactivate them instead")) {
+          setBlocked(true);
+        } else {
+          toast.error(friendlyErrorMessage(err, "Could not delete staff member."));
+        }
+      }
+    });
+  }
+
+  function onDeactivateInstead() {
+    startTransition(async () => {
+      try {
+        await setStaffActive({ staffId: staff.id, active: false });
+        setOpen(false);
+        router.refresh();
+        toast.success(`${staff.name} deactivated.`);
+      } catch (err) {
+        toast.error(friendlyErrorMessage(err, "Could not deactivate staff member."));
       }
     });
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setBlocked(false);
+      }}
+    >
       <DialogTrigger
         render={
           <Button variant="ghost" size="sm" aria-label="Delete staff" disabled={isSelf}>
@@ -190,21 +218,45 @@ export function StaffDeleteButton({ staff, isSelf }: { staff: Staff; isSelf: boo
         }
       />
       <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Delete {staff.name}?</DialogTitle>
-          <DialogDescription>
-            This permanently removes them from the sign-in allow-list. Only possible if they have no
-            leads, clients, sessions, or activity on record — if they do, deactivate instead.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
-            Cancel
-          </Button>
-          <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
-            {isPending ? "Deleting..." : "Delete"}
-          </Button>
-        </DialogFooter>
+        {blocked ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Can&apos;t delete {staff.name}</DialogTitle>
+              <DialogDescription>
+                They have existing leads, clients, sessions, or activity on record, so deleting
+                would destroy that history. Deactivating blocks their sign-in immediately without
+                losing it.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
+                Cancel
+              </Button>
+              <Button onClick={onDeactivateInstead} disabled={isPending}>
+                {isPending ? "Deactivating..." : "Deactivate Instead"}
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Delete {staff.name}?</DialogTitle>
+              <DialogDescription>
+                This permanently removes them from the sign-in allow-list. Only possible if they
+                have no leads, clients, sessions, or activity on record — if they do, you&apos;ll
+                get the option to deactivate instead.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={onConfirmDelete} disabled={isPending}>
+                {isPending ? "Deleting..." : "Delete"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -219,9 +271,12 @@ export function StaffActiveToggle({ staff, isSelf }: { staff: Staff; isSelf: boo
       try {
         await setStaffActive({ staffId: staff.id, active: !staff.active });
         router.refresh();
-      } catch {
+      } catch (err) {
         toast.error(
-          isSelf ? "You can't deactivate your own account." : "Could not update status."
+          friendlyErrorMessage(
+            err,
+            isSelf ? "You can't deactivate your own account." : "Could not update status."
+          )
         );
       }
     });

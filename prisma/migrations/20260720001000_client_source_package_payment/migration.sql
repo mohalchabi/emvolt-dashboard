@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "source" TEXT;
+ALTER TABLE "Package" ADD COLUMN IF NOT EXISTS "paymentMethod" TEXT;

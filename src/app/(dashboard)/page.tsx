@@ -11,6 +11,7 @@ import {
   getWeekSessionStats,
   getRenewalAlerts,
   getTrainerUtilization,
+  getRecentActivity,
 } from "@/lib/kpi";
 import { label } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
@@ -21,6 +22,7 @@ import { StaffLeaderboardCard } from "@/components/dashboard/staff-leaderboard";
 import { UpcomingTrialsCard } from "@/components/dashboard/upcoming-trials-list";
 import { RenewalAlertsCard } from "@/components/dashboard/renewal-alerts-list";
 import { StaleLeadsCard } from "@/components/dashboard/stale-leads-list";
+import { RecentActivityCard } from "@/components/dashboard/recent-activity";
 import { TrainerHome } from "@/components/dashboard/trainer-home";
 import { FrontDeskHome } from "@/components/dashboard/front-desk-home";
 
@@ -46,6 +48,7 @@ export default async function DashboardHome() {
     weekSessions,
     renewalAlerts,
     utilization,
+    recentActivity,
   ] = await Promise.all([
     getLeadFunnel(),
     getLeadsBySource(),
@@ -57,6 +60,7 @@ export default async function DashboardHome() {
     getWeekSessionStats(),
     getRenewalAlerts(),
     getTrainerUtilization(),
+    getRecentActivity(),
   ]);
 
   const activeClients = Object.values(activeClientsBySection).reduce((a, b) => a + b, 0);
@@ -125,6 +129,8 @@ export default async function DashboardHome() {
         <UpcomingTrialsCard data={upcomingTrials} t={t.upcomingTrials} common={t.common} />
         <RenewalAlertsCard alerts={renewalAlerts} t={t.renewalAlerts} />
       </div>
+
+      <RecentActivityCard activity={recentActivity} t={t.recentActivity} />
     </div>
   );
 }
