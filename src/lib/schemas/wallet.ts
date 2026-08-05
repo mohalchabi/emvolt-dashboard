@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { WALLET_CATEGORIES, PETTY_CASH_CATEGORY } from "@/lib/constants";
+import {
+  WALLET_CATEGORIES,
+  WALLET_PAYMENT_METHODS,
+  PETTY_CASH_CATEGORY,
+} from "@/lib/constants";
 
 // Wallet forms carry file uploads, so they submit as FormData and every field
 // arrives as a string (see src/lib/actions/wallet.ts). These schemas take that
@@ -42,6 +46,7 @@ export const walletTransactionSchema = z
     amount: money,
     paidAt: dateOnly,
     category: z.enum(WALLET_CATEGORIES),
+    method: z.enum(WALLET_PAYMENT_METHODS),
     payeeStaffId: z
       .string()
       .trim()

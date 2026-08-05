@@ -333,6 +333,10 @@ model WalletTransaction {
   amount   Float
   paidAt   DateTime
   category String // salary | petty_cash | bonus | ... — see WALLET_CATEGORIES
+  // transfer | cash. Salaries go out both ways and petty cash is always cash,
+  // so this is what tells a documented entry apart from one that legitimately
+  // has no bank slip to attach.
+  method   String   @default("transfer")
 
   // Who was paid. payeeStaffId links salaries, bonuses and petty-cash floats
   // to a Staff record so they roll up per person; payeeName covers everyone

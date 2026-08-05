@@ -13,11 +13,12 @@ import {
 } from "@/lib/schemas/wallet";
 import { parseDateOnly } from "@/lib/wallet";
 
-// Everything in the wallet has to be backed by a document — a bank transfer
-// slip for money in and out, the supplier's VAT invoice for a petty-cash
-// purchase — so every create path here demands at least one file. The cap is
-// the whole submission, not the individual file, because the upload rides
-// inside the Server Action's request body.
+// Entries can carry documents — a bank transfer slip for money in and out,
+// the supplier's VAT invoice for a petty-cash purchase — but none of them are
+// required: an entry with no paperwork still belongs in the ledger, and the
+// files can always be attached later. The cap is the whole submission, not the
+// individual file, because the upload rides inside the Server Action's
+// request body.
 const MAX_UPLOAD_BYTES = 4.5 * 1024 * 1024;
 
 type WalletEntryKind = "deposit" | "transaction" | "petty_cash_expense";
@@ -42,9 +43,6 @@ function readReceipts(formData: FormData): File[] {
     .getAll("files")
     .filter((entry): entry is File => entry instanceof File && entry.size > 0);
 
-  if (files.length === 0) {
-    throw new Error("Attach the bank transfer or invoice (PDF or photo).");
-  }
   for (const file of files) {
     if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
       throw new Error(`"${file.name}" isn't a PDF or an image.`);
@@ -113,6 +111,7 @@ export async function recordWalletTransaction(formData: FormData) {
     amount: text(formData, "amount"),
     paidAt: text(formData, "paidAt"),
     category: text(formData, "category"),
+    method: text(formData, "method"),
     payeeStaffId: text(formData, "payeeStaffId"),
     payeeName: text(formData, "payeeName"),
     note: text(formData, "note"),
@@ -131,6 +130,7 @@ export async function recordWalletTransaction(formData: FormData) {
       amount: data.amount,
       paidAt: parseDateOnly(data.paidAt),
       category: data.category,
+      method: data.method,
       // A named staff payee is the record of who was paid; the free-text name
       // is only kept for payees who aren't on staff.
       payeeStaffId: data.payeeStaffId,
@@ -195,6 +195,9 @@ export async function addWalletReceipts(formData: FormData) {
   const folder =
     kind === "deposit" ? "deposits" : kind === "transaction" ? "payments" : "petty-cash";
   const files = readReceipts(formData);
+  // Uploading nothing is a no-op everywhere else, but here it's the whole
+  // point of the form, so it's worth saying so.
+  if (files.length === 0) throw new Error("Choose a PDF or photo to upload.");
   const uploaded = await uploadReceipts(`${folder}/${entryId}`, files, session.user.id);
 
   const link =
@@ -221,19 +224,6 @@ export async function deleteWalletAttachment(input: { attachmentId: string }) {
     where: { id: input.attachmentId },
   });
   if (!attachment) return;
-
-  // Entries are required to carry proof, so the last document can't be pulled
-  // off one — delete the whole entry instead.
-  const siblings = await prisma.walletAttachment.count({
-    where: {
-      depositId: attachment.depositId,
-      transactionId: attachment.transactionId,
-      pettyCashExpenseId: attachment.pettyCashExpenseId,
-    },
-  });
-  if (siblings <= 1) {
-    throw new Error("This is the only document on the entry. Delete the entry itself instead.");
-  }
 
   await del(attachment.fileUrl, { token: process.env.BLOB_READ_WRITE_TOKEN });
   await prisma.walletAttachment.delete({ where: { id: attachment.id } });

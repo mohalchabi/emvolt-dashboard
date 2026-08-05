@@ -23,7 +23,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { WALLET_CATEGORIES, PETTY_CASH_CATEGORY, label } from "@/lib/constants";
+import {
+  WALLET_CATEGORIES,
+  WALLET_PAYMENT_METHODS,
+  PETTY_CASH_CATEGORY,
+  label,
+} from "@/lib/constants";
 import { recordWalletTransaction } from "@/lib/actions/wallet";
 import { localDateString } from "@/lib/utils";
 
@@ -33,6 +38,7 @@ export function RecordPaymentDialog({ staff }: { staff: { id: string; name: stri
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [category, setCategory] = useState<string>("salary");
+  const [method, setMethod] = useState<string>("transfer");
   const [payee, setPayee] = useState<string>("");
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
@@ -43,12 +49,17 @@ export function RecordPaymentDialog({ staff }: { staff: { id: string; name: stri
 
   function onCategoryChange(next: string) {
     setCategory(next);
-    if (next === PETTY_CASH_CATEGORY && payee === OTHER_PAYEE) setPayee("");
+    if (next === PETTY_CASH_CATEGORY) {
+      // Petty cash is handed over in cash by definition.
+      setMethod("cash");
+      if (payee === OTHER_PAYEE) setPayee("");
+    }
   }
 
   function reset() {
     formRef.current?.reset();
     setCategory("salary");
+    setMethod("transfer");
     setPayee("");
   }
 
@@ -58,6 +69,7 @@ export function RecordPaymentDialog({ staff }: { staff: { id: string; name: stri
     // carried in React state and merged in here rather than read off the form.
     const formData = new FormData(event.currentTarget);
     formData.set("category", category);
+    formData.set("method", method);
     formData.set("payeeStaffId", payee === OTHER_PAYEE ? "" : payee);
 
     startTransition(async () => {
@@ -81,7 +93,7 @@ export function RecordPaymentDialog({ staff }: { staff: { id: string; name: stri
           <DialogTitle>Record a Payment</DialogTitle>
           <DialogDescription>
             Money going out of the wallet — a salary, a petty cash float, rent. Attach the bank
-            transfer or receipt.
+            transfer or receipt if there is one; cash payments often won&apos;t have one.
           </DialogDescription>
         </DialogHeader>
 
@@ -120,6 +132,22 @@ export function RecordPaymentDialog({ staff }: { staff: { id: string; name: stri
                 {WALLET_CATEGORIES.map((c) => (
                   <SelectItem key={c} value={c}>
                     {label(c)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Paid by</Label>
+            <Select value={method} onValueChange={(v) => v && setMethod(String(v))}>
+              <SelectTrigger className="w-full">
+                <SelectValue>{(v: string) => label(v)}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {WALLET_PAYMENT_METHODS.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {label(m)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -177,16 +205,17 @@ export function RecordPaymentDialog({ staff }: { staff: { id: string; name: stri
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="payment-files">Bank transfer or receipt</Label>
+            <Label htmlFor="payment-files">Bank transfer or receipt (optional)</Label>
             <Input
               id="payment-files"
               name="files"
               type="file"
               accept="image/*,application/pdf"
               multiple
-              required
             />
-            <p className="text-xs text-muted-foreground">PDF or photo, 4.5 MB per upload.</p>
+            <p className="text-xs text-muted-foreground">
+              PDF or photo, 4.5 MB per upload. You can add it later.
+            </p>
           </div>
 
           <DialogFooter>

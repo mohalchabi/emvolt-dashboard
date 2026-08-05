@@ -106,6 +106,12 @@ export type WalletCategory = (typeof WALLET_CATEGORIES)[number];
 
 export const PETTY_CASH_CATEGORY: WalletCategory = "petty_cash";
 
+// How a wallet payment physically left the wallet. Salaries go out both ways
+// and petty cash is always cash, so this is what explains an entry that has
+// no bank transfer attached to it.
+export const WALLET_PAYMENT_METHODS = ["transfer", "cash"] as const;
+export type WalletPaymentMethod = (typeof WALLET_PAYMENT_METHODS)[number];
+
 export const LABELS: Record<string, string> = {
   admin: "Admin",
   trainer: "Trainer",
@@ -170,6 +176,8 @@ export const LABELS: Record<string, string> = {
   marketing: "Marketing",
   transport: "Transport",
   government_fees: "Government Fees",
+  transfer: "Bank Transfer",
+  cash: "Cash",
 };
 
 export const LABELS_AR: Record<string, string> = {
@@ -236,6 +244,8 @@ export const LABELS_AR: Record<string, string> = {
   marketing: "تسويق",
   transport: "مواصلات",
   government_fees: "رسوم حكومية",
+  transfer: "تحويل بنكي",
+  cash: "نقداً",
 };
 
 export function label(value: string, locale: "en" | "ar" = "en"): string {

@@ -136,16 +136,17 @@ export function RecordPettyCashBillDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor={`bill-files-${issueId}`}>Invoice</Label>
+            <Label htmlFor={`bill-files-${issueId}`}>Invoice (optional)</Label>
             <Input
               id={`bill-files-${issueId}`}
               name="files"
               type="file"
               accept="image/*,application/pdf"
               multiple
-              required
             />
-            <p className="text-xs text-muted-foreground">PDF or photo, 4.5 MB per upload.</p>
+            <p className="text-xs text-muted-foreground">
+              PDF or photo, 4.5 MB per upload. You can add it later.
+            </p>
           </div>
 
           <DialogFooter>

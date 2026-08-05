@@ -49,8 +49,8 @@ export function RecordDepositDialog() {
         <DialogHeader>
           <DialogTitle>Add Money to the Wallet</DialogTitle>
           <DialogDescription>
-            Record a transfer you received — the monthly funding for salaries and petty cash, or
-            anything extra — and attach the bank transfer.
+            Record money you received — the monthly funding for salaries and petty cash, or
+            anything extra. Attach the bank transfer if you have it.
           </DialogDescription>
         </DialogHeader>
 
@@ -101,16 +101,17 @@ export function RecordDepositDialog() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="deposit-files">Bank transfer</Label>
+            <Label htmlFor="deposit-files">Bank transfer (optional)</Label>
             <Input
               id="deposit-files"
               name="files"
               type="file"
               accept="image/*,application/pdf"
               multiple
-              required
             />
-            <p className="text-xs text-muted-foreground">PDF or photo, 4.5 MB per upload.</p>
+            <p className="text-xs text-muted-foreground">
+              PDF or photo, 4.5 MB per upload. You can add it later.
+            </p>
           </div>
 
           <DialogFooter>

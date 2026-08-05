@@ -1,7 +1,7 @@
 import { Coins, Receipt, TriangleAlert, Banknote } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/auth-helpers";
-import { PETTY_CASH_CATEGORY } from "@/lib/constants";
+import { PETTY_CASH_CATEGORY, label } from "@/lib/constants";
 import {
   formatSar,
   formatDate,
@@ -206,7 +206,7 @@ export default async function PettyCashPage({
                     {holder} · {formatSar(issued)}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Issued {formatDate(float.paidAt)}
+                    Issued {formatDate(float.paidAt)} · {label(float.method)}
                     {float.note ? ` · ${float.note}` : ""}
                   </p>
                   <div className="flex flex-wrap items-center gap-2 pt-1">

@@ -161,6 +161,7 @@ export default async function WalletPage({
       payee: payment.payeeStaff?.name ?? payment.payeeName ?? "—",
       detail:
         [
+          label(payment.method),
           payment.note,
           payment.category === PETTY_CASH_CATEGORY &&
             `${payment._count.pettyCashSpend} invoice${payment._count.pettyCashSpend === 1 ? "" : "s"} logged`,
@@ -184,8 +185,8 @@ export default async function WalletPage({
         <div>
           <h1 className="font-heading text-2xl font-semibold tracking-tight">Wallet</h1>
           <p className="text-sm text-muted-foreground">
-            Every riyal that comes in and goes out, with the bank transfer or invoice behind it.
-            Admins only.
+            Every riyal that comes in and goes out, with the bank transfer or invoice behind it
+            where there is one. Admins only.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
