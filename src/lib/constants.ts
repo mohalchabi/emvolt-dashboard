@@ -70,6 +70,28 @@ export const SESSION_STATUSES = [
 ] as const;
 export type SessionStatus = (typeof SESSION_STATUSES)[number];
 
+// What a wallet payment was for. `petty_cash` is special: it's a float handed
+// to a staff member rather than a finished expense, so those rows get
+// reconciled against the VAT invoices they later bring back.
+export const WALLET_CATEGORIES = [
+  "salary",
+  "petty_cash",
+  "bonus",
+  "advance",
+  "rent",
+  "utilities",
+  "equipment",
+  "maintenance",
+  "supplies",
+  "marketing",
+  "transport",
+  "government_fees",
+  "other",
+] as const;
+export type WalletCategory = (typeof WALLET_CATEGORIES)[number];
+
+export const PETTY_CASH_CATEGORY: WalletCategory = "petty_cash";
+
 export const LABELS: Record<string, string> = {
   admin: "Admin",
   trainer: "Trainer",
@@ -113,6 +135,18 @@ export const LABELS: Record<string, string> = {
   interested_later: "Interested — follow up later",
   declined: "Not interested",
   booked_trial: "Booked a trial",
+  salary: "Salary",
+  petty_cash: "Petty Cash",
+  bonus: "Bonus",
+  advance: "Salary Advance",
+  rent: "Rent",
+  utilities: "Utilities",
+  equipment: "Equipment",
+  maintenance: "Maintenance",
+  supplies: "Supplies",
+  marketing: "Marketing",
+  transport: "Transport",
+  government_fees: "Government Fees",
 };
 
 export const LABELS_AR: Record<string, string> = {
@@ -158,6 +192,18 @@ export const LABELS_AR: Record<string, string> = {
   interested_later: "مهتم - متابعة لاحقاً",
   declined: "غير مهتم",
   booked_trial: "تم حجز تجربة",
+  salary: "راتب",
+  petty_cash: "نثريات",
+  bonus: "مكافأة",
+  advance: "سلفة على الراتب",
+  rent: "إيجار",
+  utilities: "فواتير الخدمات",
+  equipment: "معدات",
+  maintenance: "صيانة",
+  supplies: "مستلزمات",
+  marketing: "تسويق",
+  transport: "مواصلات",
+  government_fees: "رسوم حكومية",
 };
 
 export function label(value: string, locale: "en" | "ar" = "en"): string {

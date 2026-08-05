@@ -26,6 +26,7 @@ export const ar: Dictionary = {
     calendar: "التقويم",
     staff: "الموظفون",
     packageTypes: "أنواع الباقات",
+    wallet: "المحفظة",
   },
   devLogin: {
     subtitle: "لوحة التحكم — دخول تجريبي",

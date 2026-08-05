@@ -33,6 +33,12 @@ model Staff {
   contactAttempts  LeadContactAttempt[]  @relation("ContactAttemptStaff")
   inBodyResults    InBodyResult[]        @relation("InBodyResultUploadedBy")
   messages         Message[]             @relation("MessageAuthorStaff")
+
+  walletDepositsRecorded     WalletDeposit[]     @relation("WalletDepositRecordedBy")
+  walletPaymentsRecorded     WalletTransaction[] @relation("WalletTransactionRecordedBy")
+  walletPaymentsReceived     WalletTransaction[] @relation("WalletTransactionPayee")
+  pettyCashExpensesRecorded  PettyCashExpense[]  @relation("PettyCashExpenseRecordedBy")
+  walletAttachments          WalletAttachment[]  @relation("WalletAttachmentUploadedBy")
 }
 
 model Lead {
@@ -264,4 +270,112 @@ model Message {
   readAt         DateTime?
 
   @@index([clientId])
+}
+
+// ─── Wallet (admin-only cash ledger) ───────────────────────────────────────
+//
+// Money the studio receives (the monthly transfer covering salaries, petty
+// cash, and anything extra) and every payment made out of it. There is one
+// implicit wallet, so there's no Wallet table: the balance is always derived
+// as sum(deposits) - sum(transactions) and can never drift from the entries
+// that explain it.
+
+model WalletDeposit {
+  id           String   @id @default(cuid())
+  amount       Float
+  receivedAt   DateTime
+  receivedFrom String? // who sent it, e.g. "Owner", "Head office"
+  reference    String? // the bank's transfer/reference number
+  note         String?
+  recordedById String
+  recordedBy   Staff    @relation("WalletDepositRecordedBy", fields: [recordedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  attachments WalletAttachment[] @relation("WalletAttachmentDeposit")
+
+  @@index([receivedAt])
+}
+
+// One payment out of the wallet: a salary, a petty-cash float handed to a
+// coach, rent, and so on. A `petty_cash` row is a float rather than a final
+// expense — what it was actually spent on arrives later as PettyCashExpense
+// rows pointing back at it.
+model WalletTransaction {
+  id       String   @id @default(cuid())
+  amount   Float
+  paidAt   DateTime
+  category String // salary | petty_cash | bonus | ... — see WALLET_CATEGORIES
+
+  // Who was paid. payeeStaffId links salaries, bonuses and petty-cash floats
+  // to a Staff record so they roll up per person; payeeName covers everyone
+  // else (landlord, suppliers, one-off vendors).
+  payeeStaffId String?
+  payeeStaff   Staff?  @relation("WalletTransactionPayee", fields: [payeeStaffId], references: [id])
+  payeeName    String?
+
+  note         String?
+  recordedById String
+  recordedBy   Staff    @relation("WalletTransactionRecordedBy", fields: [recordedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  attachments    WalletAttachment[] @relation("WalletAttachmentTransaction")
+  pettyCashSpend PettyCashExpense[] @relation("PettyCashExpenseIssue")
+
+  @@index([paidAt])
+  @@index([category])
+  @@index([payeeStaffId])
+}
+
+// A single thing bought with a petty-cash float, backed by the supplier's
+// VAT invoice. Always hangs off the `petty_cash` WalletTransaction it was
+// spent from, so a float can be reconciled: issued 200, documented 150 in
+// bills, 50 still unaccounted for.
+model PettyCashExpense {
+  id      String            @id @default(cuid())
+  issueId String
+  issue   WalletTransaction @relation("PettyCashExpenseIssue", fields: [issueId], references: [id], onDelete: Cascade)
+
+  amount    Float // gross paid, VAT included
+  vatAmount Float? // the VAT portion of `amount`, when the invoice shows one
+  vendor    String // where they bought it
+  vatNumber String? // the supplier's VAT registration number, off the invoice
+  description String?
+  spentAt   DateTime
+
+  recordedById String
+  recordedBy   Staff    @relation("PettyCashExpenseRecordedBy", fields: [recordedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  attachments WalletAttachment[] @relation("WalletAttachmentPettyCashExpense")
+
+  @@index([issueId])
+  @@index([spentAt])
+}
+
+// Proof for a wallet entry — the bank transfer slip, or the photographed /
+// scanned VAT invoice. Polymorphic like ActivityLog: exactly one of
+// depositId / transactionId / pettyCashExpenseId is set. Files live in
+// private blob storage and are served through /api/wallet-attachments/[id],
+// which re-checks that the viewer is an admin.
+model WalletAttachment {
+  id String @id @default(cuid())
+
+  depositId String?
+  deposit   WalletDeposit? @relation("WalletAttachmentDeposit", fields: [depositId], references: [id], onDelete: Cascade)
+
+  transactionId String?
+  transaction   WalletTransaction? @relation("WalletAttachmentTransaction", fields: [transactionId], references: [id], onDelete: Cascade)
+
+  pettyCashExpenseId String?
+  pettyCashExpense   PettyCashExpense? @relation("WalletAttachmentPettyCashExpense", fields: [pettyCashExpenseId], references: [id], onDelete: Cascade)
+
+  fileUrl      String
+  fileName     String
+  uploadedById String
+  uploadedBy   Staff    @relation("WalletAttachmentUploadedBy", fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([depositId])
+  @@index([transactionId])
+  @@index([pettyCashExpenseId])
 }

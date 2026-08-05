@@ -24,6 +24,7 @@ export const en = {
     calendar: "Calendar",
     staff: "Staff",
     packageTypes: "Package Types",
+    wallet: "Wallet",
   },
   devLogin: {
     subtitle: "Dashboard — Dev Login",

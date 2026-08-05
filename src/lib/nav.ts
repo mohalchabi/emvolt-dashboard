@@ -9,7 +9,8 @@ export type NavKey =
   | "myClients"
   | "calendar"
   | "staff"
-  | "packageTypes";
+  | "packageTypes"
+  | "wallet";
 
 export type NavItem = {
   href: string;
@@ -28,6 +29,9 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/calendar", labelKey: "calendar", roles: ["admin", "front_desk", "trainer"] },
   { href: "/staff", labelKey: "staff", roles: ["admin"] },
   { href: "/package-types", labelKey: "packageTypes", roles: ["admin"] },
+  // Cash ledger — salaries, petty cash and the transfers funding them are
+  // admin-only, so this never appears for trainers or front desk.
+  { href: "/wallet", labelKey: "wallet", roles: ["admin"] },
 ];
 
 export function navForRole(role: StaffRole): NavItem[] {
