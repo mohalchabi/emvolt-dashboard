@@ -25,6 +25,7 @@ export const en = {
     staff: "Staff",
     packageTypes: "Package Types",
     wallet: "Wallet",
+    help: "How to use",
   },
   devLogin: {
     subtitle: "Dashboard — Dev Login",
@@ -379,6 +380,64 @@ export const en = {
     contactLogged: "Contact logged.",
     couldNotLog: "Could not log contact.",
     pickTrainerAndTime: "Pick a trainer and a date/time for the trial.",
+  },
+  tutorials: {
+    title: "How to use the dashboard",
+    subtitle: "Four short clips covering what you need day to day.",
+    silentNote:
+      "The clips have no sound. The steps are written on screen in Arabic — switch the language above if you'd rather read this page in Arabic too.",
+    summaryLabel: "In short",
+    warnLabel: "Careful",
+    audienceLabel: "For",
+    minutes: "min",
+    rulesTitle: "Three rules worth remembering",
+    rules: [
+      "Log every contact attempt with a lead, even when nobody picks up.",
+      "Book the session from the client's page, and close it as soon as it's over.",
+      "Never re-add a lead as a new client — convert them from their page so their history follows them.",
+    ],
+    demoNote: "Recorded on demo data. No real client information appears in the clips.",
+    chapters: {
+      leads: {
+        title: "The leads assigned to you",
+        duration: "1:30",
+        points: [
+          "The admin hands out new leads most days; they show up under \"My Leads\".",
+          "Contact each new lead the same day, or the next day at the latest.",
+          "Log every attempt — even \"no answer\" gets logged.",
+          "\"No answer\" doesn't change the status. Only \"interested later\", \"trial booked\" and \"not interested\" do.",
+        ],
+      },
+      sessions: {
+        title: "Booking sessions and closing them",
+        duration: "1:06",
+        points: [
+          "Book the session from the client's own page — not from the calendar.",
+          "The calendar only shows what's already booked.",
+          "Once the session is over, set it to \"completed\" or \"no-show\".",
+        ],
+        warn: "A session you never close is never deducted from the client's package — their remaining sessions stay wrong.",
+      },
+      newClient: {
+        title: "Adding a client and selling a package",
+        duration: "0:47",
+        points: [
+          "Already a lead? Open them and press \"convert to client\" — don't add them again.",
+          "Walked in and joined directly? Add them through \"New client\".",
+          "After creating them, open the client and add the package they bought.",
+          "Without a package you can't book sessions for them properly.",
+        ],
+      },
+      followUp: {
+        title: "Following up with your clients",
+        duration: "0:41",
+        points: [
+          "Watch the \"sessions remaining\" column and tell clients before they run out.",
+          "Upload the InBody result every time a client is measured.",
+          "Reply to client messages from their page.",
+        ],
+      },
+    },
   },
 };
 
