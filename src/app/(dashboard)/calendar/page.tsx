@@ -1,6 +1,8 @@
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, format, isValid, parseISO } from "date-fns";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth-helpers";
+import { getDictionary } from "@/lib/i18n";
+import { HelpTip } from "@/components/help/help-tip";
 import { CalendarToolbar } from "@/components/calendar/calendar-toolbar";
 import { DayGrid } from "@/components/calendar/day-grid";
 import { WeekGrid } from "@/components/calendar/week-grid";
@@ -13,6 +15,7 @@ export default async function CalendarPage({
 }) {
   const session = await requireSession();
   const params = await searchParams;
+  const { t } = await getDictionary();
 
   const view = params.view === "week" ? "week" : "day";
   const parsedDate = params.date ? parseISO(params.date) : new Date();
@@ -49,7 +52,15 @@ export default async function CalendarPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Calendar</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">Calendar</h1>
+          <HelpTip
+            label={t.help.whatIsThis}
+            title={t.help.addSession.title}
+            body={t.help.addSession.body}
+            steps={t.help.addSession.steps}
+          />
+        </div>
         <p className="text-sm text-muted-foreground">
           Trials and client sessions across {isTrainer ? "your schedule" : "all trainers"}.
         </p>
