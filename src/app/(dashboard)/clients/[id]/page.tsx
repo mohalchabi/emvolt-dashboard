@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth-helpers";
+import { getDictionary } from "@/lib/i18n";
 import { label } from "@/lib/constants";
 import { packageBalances } from "@/lib/package-balance";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,7 @@ export default async function ClientDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await requireSession();
+  const { locale, t } = await getDictionary();
   const { id } = await params;
 
   const client = await prisma.client.findUnique({
@@ -74,23 +76,23 @@ export default async function ClientDetailPage({
     <div className="flex flex-col gap-6">
       <div>
         <Link href={backHref} className="text-sm text-muted-foreground hover:underline">
-          &larr; Back to {canManage ? "Clients" : "My Clients"}
+          &larr; {canManage ? t.clientDetail.backToClients : t.myClientsPage.title}
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-3">
           <h1 className="font-heading text-2xl font-semibold tracking-tight">{client.name}</h1>
-          <Badge variant="outline">{label(client.section)}</Badge>
+          <Badge variant="outline">{label(client.section, locale)}</Badge>
           {session.user.role === "admin" && <PreviewAsClientButton clientId={client.id} />}
         </div>
         <p className="text-sm text-muted-foreground">
           {client.phone}
-          {client.email ? ` · ${client.email}` : ""} · client since {client.createdAt.toLocaleDateString()}
-          {client.source ? ` · via ${label(client.source)}` : ""}
+          {client.email ? ` · ${client.email}` : ""} · {t.clientDetail.clientSince} {client.createdAt.toLocaleDateString()}
+          {client.source ? ` · ${label(client.source, locale)}` : ""}
           {client.idNumber ? ` · ID ${client.idNumber}` : ""}
         </p>
         {client.convertedFromLead && (
           <p className="mt-1 text-sm">
             <Link href={`/leads/${client.convertedFromLead.id}`} className="text-primary hover:underline">
-              View original lead &rarr;
+              {t.clientDetail.viewOriginalLead} &rarr;
             </Link>
           </p>
         )}
@@ -98,38 +100,39 @@ export default async function ClientDetailPage({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="flex flex-col gap-6">
-          <ClientDetailPanel client={client} trainers={trainers} logs={logs} canManage={canManage} />
+          <ClientDetailPanel client={client} trainers={trainers} logs={logs} canManage={canManage} dict={t.clientDetail} locale={locale} />
         </div>
 
         <div className="flex flex-col gap-6">
-          <PackagesPanel clientId={client.id} section={client.section} packages={client.packages} />
-          <InbodyPanel clientId={client.id} results={inBodyResults} />
+          <PackagesPanel clientId={client.id} section={client.section} packages={client.packages} locale={locale} t={t.clientDetail} />
+          <InbodyPanel clientId={client.id} results={inBodyResults} t={t.clientDetail} />
           <DocumentsPanel
             clientId={client.id}
             contracts={documents.filter((d) => d.type === "contract")}
             idDocuments={documents.filter((d) => d.type === "id_document")}
+            t={t.clientDetail}
           />
-          <MessagesPanel clientId={client.id} clientName={client.name} messages={messages} />
+          <MessagesPanel clientId={client.id} clientName={client.name} messages={messages} t={t.clientDetail} />
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Recent Sessions</CardTitle>
-              <BookSessionDialog clientId={client.id} packages={eligiblePackages} />
+              <CardTitle>{t.clientDetail.recentSessions}</CardTitle>
+              <BookSessionDialog clientId={client.id} packages={eligiblePackages} locale={locale} t={t.clientDetail} />
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
               {sessions.map((s) => (
                 <div key={s.id} className="flex items-center justify-between text-sm">
                   <div>
-                    <span className="font-medium">{label(s.type)}</span>{" "}
+                    <span className="font-medium">{label(s.type, locale)}</span>{" "}
                     <span className="text-muted-foreground">
                       {s.datetime.toLocaleDateString()} {s.datetime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
-                  <SessionStatusMenu sessionId={s.id} status={s.status} />
+                  <SessionStatusMenu sessionId={s.id} status={s.status} locale={locale} t={t.clientDetail} />
                 </div>
               ))}
               {sessions.length === 0 && (
-                <p className="text-sm text-muted-foreground">No sessions recorded yet.</p>
+                <p className="text-sm text-muted-foreground">{t.clientDetail.noSessions}</p>
               )}
             </CardContent>
           </Card>

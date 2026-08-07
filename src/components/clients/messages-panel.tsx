@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { sendStaffMessage } from "@/lib/actions/clients";
 import type { Message, Staff } from "@/generated/prisma/client";
+import type { Dictionary } from "@/lib/i18n";
 
 type MessageWithAuthor = Message & { authorStaff: Staff | null };
 
@@ -16,10 +17,12 @@ export function MessagesPanel({
   clientId,
   clientName,
   messages,
+  t,
 }: {
   clientId: string;
   clientName: string;
   messages: MessageWithAuthor[];
+  t: Dictionary["clientDetail"];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -33,7 +36,7 @@ export function MessagesPanel({
         setText("");
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not send message.");
+        toast.error(err instanceof Error ? err.message : t.couldNotSend);
       }
     });
   }
@@ -41,12 +44,12 @@ export function MessagesPanel({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Messages</CardTitle>
+        <CardTitle>{t.messagesTitle}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="flex max-h-96 flex-col gap-2 overflow-y-auto">
           {messages.length === 0 && (
-            <p className="py-4 text-center text-sm text-muted-foreground">No messages yet.</p>
+            <p className="py-4 text-center text-sm text-muted-foreground">{t.noMessages}</p>
           )}
           {messages.map((m) => (
             <div
@@ -62,7 +65,7 @@ export function MessagesPanel({
                 {m.text}
               </div>
               <span className="text-xs text-muted-foreground">
-                {m.authorIsClient ? clientName : (m.authorStaff?.name ?? "Staff")} ·{" "}
+                {m.authorIsClient ? clientName : (m.authorStaff?.name ?? t.staff)} ·{" "}
                 {m.createdAt.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
               </span>
             </div>
@@ -71,14 +74,14 @@ export function MessagesPanel({
 
         <div className="flex gap-2">
           <Textarea
-            placeholder={`Reply to ${clientName}...`}
+            placeholder={`${t.replyTo} ${clientName}...`}
             value={text}
             onChange={(e) => setText(e.target.value)}
             className="min-h-16"
             disabled={isPending}
           />
           <Button onClick={onSend} disabled={isPending || !text.trim()} className="self-end">
-            {isPending ? "Sending..." : "Send"}
+            {isPending ? t.sending : t.send}
           </Button>
         </div>
       </CardContent>
