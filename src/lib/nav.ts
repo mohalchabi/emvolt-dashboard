@@ -10,7 +10,8 @@ export type NavKey =
   | "calendar"
   | "staff"
   | "packageTypes"
-  | "wallet";
+  | "wallet"
+  | "help";
 
 export type NavItem = {
   href: string;
@@ -32,6 +33,9 @@ export const NAV_ITEMS: NavItem[] = [
   // Cash ledger — salaries, petty cash and the transfers funding them are
   // admin-only, so this never appears for trainers or front desk.
   { href: "/wallet", labelKey: "wallet", roles: ["admin"] },
+  // Training videos. Sits last so it's out of the daily path but always
+  // reachable — new staff are pointed here on their first shift.
+  { href: "/help", labelKey: "help", roles: ["admin", "trainer", "front_desk"] },
 ];
 
 export function navForRole(role: StaffRole): NavItem[] {
