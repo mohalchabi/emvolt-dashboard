@@ -1,5 +1,6 @@
 import { label } from "@/lib/constants";
 import { SessionBlock } from "@/components/calendar/session-block";
+import { SessionStatusMenu } from "@/components/calendar/session-status-menu";
 import type { Staff, Session, Lead, Client } from "@/generated/prisma/client";
 
 type SessionWithRefs = Session & { lead: Lead | null; client: Client | null };
@@ -41,13 +42,14 @@ export function MobileDayAgenda({
             </span>
             <div className="min-w-0 flex-1">
               <SessionBlock session={s} />
+              {trainer && (
+                <span className="text-[11px] text-muted-foreground">
+                  {trainer.name}
+                  {trainer.section ? ` · ${label(trainer.section)}` : ""}
+                </span>
+              )}
             </div>
-            {trainer && (
-              <span className="shrink-0 text-[11px] text-muted-foreground">
-                {trainer.name}
-                {trainer.section ? ` · ${label(trainer.section)}` : ""}
-              </span>
-            )}
+            <SessionStatusMenu sessionId={s.id} status={s.status} />
           </div>
         );
       })}
