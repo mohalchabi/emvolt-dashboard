@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SESSION_STATUSES, label } from "@/lib/constants";
+import type { Dictionary } from "@/lib/i18n";
 import { updateSessionStatus } from "@/lib/actions/sessions";
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -30,10 +31,12 @@ export function SessionStatusMenu({
   sessionId,
   status,
   locale = "en",
+  t,
 }: {
   sessionId: string;
   status: string;
   locale?: "en" | "ar";
+  t?: Dictionary["clientDetail"];
 }) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -58,7 +61,7 @@ export function SessionStatusMenu({
             type="button"
             disabled={isPending}
             className="shrink-0 disabled:opacity-50"
-            aria-label="Change session status"
+            aria-label={t?.changeStatus ?? "Change session status"}
           />
         }
       >

@@ -18,10 +18,19 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { uploadInBodyResult, deleteInBodyResult } from "@/lib/actions/inbody";
 import type { InBodyResult, Staff } from "@/generated/prisma/client";
+import type { Dictionary } from "@/lib/i18n";
 
 type Result = InBodyResult & { uploadedBy: Staff };
 
-export function InbodyPanel({ clientId, results }: { clientId: string; results: Result[] }) {
+export function InbodyPanel({
+  clientId,
+  results,
+  t,
+}: {
+  clientId: string;
+  results: Result[];
+  t: Dictionary["clientDetail"];
+}) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -57,9 +66,9 @@ export function InbodyPanel({ clientId, results }: { clientId: string; results: 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>InBody Results</CardTitle>
+        <CardTitle>{t.inbodyTitle}</CardTitle>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger render={<Button variant="secondary">Upload Result</Button>} />
+          <DialogTrigger render={<Button variant="secondary">{t.uploadResult}</Button>} />
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Upload InBody Result</DialogTitle>
@@ -89,7 +98,7 @@ export function InbodyPanel({ clientId, results }: { clientId: string; results: 
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {results.length === 0 && (
-          <p className="text-sm text-muted-foreground">No InBody results uploaded yet.</p>
+          <p className="text-sm text-muted-foreground">{t.noInbody}</p>
         )}
         {results.map((r) => (
           <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-border p-3 text-sm">

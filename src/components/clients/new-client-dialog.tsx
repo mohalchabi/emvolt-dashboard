@@ -35,8 +35,15 @@ import { createClientSchema, type CreateClientInput } from "@/lib/schemas/client
 import { createClient } from "@/lib/actions/clients";
 import { SECTIONS, label } from "@/lib/constants";
 import type { Staff } from "@/generated/prisma/client";
+import type { Dictionary } from "@/lib/i18n";
 
-export function NewClientDialog({ trainers }: { trainers: Staff[] }) {
+export function NewClientDialog({
+  trainers,
+  t,
+}: {
+  trainers: Staff[];
+  t: Dictionary["clientsPage"];
+}) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -67,10 +74,10 @@ export function NewClientDialog({ trainers }: { trainers: Staff[] }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button>New Client</Button>} />
+      <DialogTrigger render={<Button>{t.newClient}</Button>} />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>New Client</DialogTitle>
+          <DialogTitle>{t.newClient}</DialogTitle>
           <DialogDescription>Add a client directly (bypassing the lead funnel).</DialogDescription>
         </DialogHeader>
 

@@ -42,11 +42,19 @@ import { createWalkInClientSchema, type CreateWalkInClientInput } from "@/lib/sc
 import { createWalkInClient } from "@/lib/actions/clients";
 import { SECTIONS, CLIENT_SOURCES, PAYMENT_METHODS, label, type TrainingType } from "@/lib/constants";
 import type { PackageTemplate } from "@/generated/prisma/client";
+import type { Dictionary } from "@/lib/i18n";
 
 const CUSTOM = "custom";
 const DISCOUNT_RATE = 0.45;
 
-export function NewWalkInClientDialog({ templates }: { templates: PackageTemplate[] }) {
+export function NewWalkInClientDialog({
+  templates,
+  dict,
+}: {
+  templates: PackageTemplate[];
+  // `dict`, not `t`: this file already uses `t` for package templates.
+  dict: Dictionary["clientsPage"];
+}) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [templateChoice, setTemplateChoice] = useState<string>(CUSTOM);
@@ -137,10 +145,10 @@ export function NewWalkInClientDialog({ templates }: { templates: PackageTemplat
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button>New Client</Button>} />
+      <DialogTrigger render={<Button>{dict.newClient}</Button>} />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>New Client</DialogTitle>
+          <DialogTitle>{dict.newClient}</DialogTitle>
           <DialogDescription>
             Sign up a walk-in who wasn&apos;t already a lead &mdash; their info, how they heard about us, and
             their first package purchase.

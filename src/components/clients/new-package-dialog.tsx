@@ -42,6 +42,7 @@ import { createPackageSchema, type CreatePackageInput } from "@/lib/schemas/clie
 import { createPackage } from "@/lib/actions/clients";
 import { PAYMENT_METHODS, label, type TrainingType } from "@/lib/constants";
 import type { PackageTemplate } from "@/generated/prisma/client";
+import type { Dictionary } from "@/lib/i18n";
 
 const CUSTOM = "custom";
 const DISCOUNT_RATE = 0.45;
@@ -49,9 +50,13 @@ const DISCOUNT_RATE = 0.45;
 export function NewPackageDialog({
   clientId,
   templates,
+  dict,
 }: {
   clientId: string;
   templates: PackageTemplate[];
+  // Named `dict` rather than `t` because `t` is already the loop variable for
+  // package templates further down this file.
+  dict: Dictionary["clientDetail"];
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -136,10 +141,10 @@ export function NewPackageDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="secondary">Add Package</Button>} />
+      <DialogTrigger render={<Button variant="secondary">{dict.addPackage}</Button>} />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Package</DialogTitle>
+          <DialogTitle>{dict.addPackage}</DialogTitle>
           <DialogDescription>Record a new session package purchase for this client.</DialogDescription>
         </DialogHeader>
 

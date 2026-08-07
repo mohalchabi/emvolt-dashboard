@@ -50,7 +50,7 @@ export default async function MyClientsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-heading text-2xl font-semibold tracking-tight">My Clients</h1>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight">{t.myClientsPage.title}</h1>
             <HelpTip
               label={t.help.whatIsThis}
               title={t.help.myClients.title}
@@ -59,16 +59,17 @@ export default async function MyClientsPage() {
             />
           </div>
           <p className="text-sm text-muted-foreground">
-            {clients.length} client{clients.length === 1 ? "" : "s"} assigned to you.
+            {clients.length}{" "}
+            {clients.length === 1 ? t.myClientsPage.assignedSingular : t.myClientsPage.assignedPlural}
           </p>
         </div>
-        <NewWalkInClientDialog templates={templates} />
+        <NewWalkInClientDialog templates={templates} dict={t.clientsPage} />
       </div>
 
       {clients.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
-            No clients assigned to you yet.
+            {t.myClientsPage.noneYet}
           </CardContent>
         </Card>
       ) : (
@@ -90,10 +91,10 @@ export default async function MyClientsPage() {
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span>{client.phone}</span>
                     {remaining === null ? (
-                      <span>No active package</span>
+                      <span>{t.clientsPage.noActivePackage}</span>
                     ) : (
                       <span className={remaining <= 2 ? "font-medium text-destructive" : ""}>
-                        {remaining} sessions left
+                        {remaining} {t.clientsPage.sessionsLeft}
                       </span>
                     )}
                   </div>
@@ -108,10 +109,10 @@ export default async function MyClientsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Sessions Left</TableHead>
+                    <TableHead>{t.clientsPage.colName}</TableHead>
+                    <TableHead>{t.clientsPage.colPhone}</TableHead>
+                    <TableHead>{t.clientsPage.colStatus}</TableHead>
+                    <TableHead>{t.clientsPage.colSessionsLeft}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -130,7 +131,7 @@ export default async function MyClientsPage() {
                         </TableCell>
                         <TableCell>
                           {remaining === null ? (
-                            <span className="text-muted-foreground">No active package</span>
+                            <span className="text-muted-foreground">{t.clientsPage.noActivePackage}</span>
                           ) : (
                             <span className={remaining <= 2 ? "font-medium text-destructive" : ""}>
                               {remaining}

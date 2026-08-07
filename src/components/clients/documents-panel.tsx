@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { uploadClientDocument, deleteClientDocument } from "@/lib/actions/documents";
 import type { ClientDocument, Staff } from "@/generated/prisma/client";
+import type { Dictionary } from "@/lib/i18n";
 
 type Doc = ClientDocument & { uploadedBy: Staff };
 
@@ -26,11 +27,13 @@ function DocumentSection({
   type,
   title,
   docs,
+  t,
 }: {
   clientId: string;
   type: "contract" | "id_document";
   title: string;
   docs: Doc[];
+  t: Dictionary["clientDetail"];
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -69,7 +72,7 @@ function DocumentSection({
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-medium">{title}</h4>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger render={<Button variant="secondary" size="sm">Upload</Button>} />
+          <DialogTrigger render={<Button variant="secondary" size="sm">{t.upload}</Button>} />
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Upload {title}</DialogTitle>
@@ -92,7 +95,7 @@ function DocumentSection({
           </DialogContent>
         </Dialog>
       </div>
-      {docs.length === 0 && <p className="text-xs text-muted-foreground">None uploaded yet.</p>}
+      {docs.length === 0 && <p className="text-xs text-muted-foreground">{t.noneUploaded}</p>}
       {docs.map((d) => (
         <div key={d.id} className="flex items-center justify-between gap-2 rounded-lg border border-border p-2 text-sm">
           <a
@@ -125,20 +128,22 @@ export function DocumentsPanel({
   clientId,
   contracts,
   idDocuments,
+  t,
 }: {
   clientId: string;
   contracts: Doc[];
   idDocuments: Doc[];
+  t: Dictionary["clientDetail"];
 }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Documents</CardTitle>
+        <CardTitle>{t.documentsTitle}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <DocumentSection clientId={clientId} type="contract" title="Contract" docs={contracts} />
+        <DocumentSection clientId={clientId} type="contract" title={t.contract} docs={contracts} t={t} />
         <div className="h-px bg-border" />
-        <DocumentSection clientId={clientId} type="id_document" title="ID Document" docs={idDocuments} />
+        <DocumentSection clientId={clientId} type="id_document" title={t.idDocument} docs={idDocuments} t={t} />
       </CardContent>
     </Card>
   );

@@ -24,15 +24,20 @@ import {
 } from "@/components/ui/select";
 import { bookClientSession } from "@/lib/actions/clients";
 import { TRAINING_TYPES, label, type TrainingType } from "@/lib/constants";
+import type { Dictionary, Locale } from "@/lib/i18n";
 
 type EligiblePackage = { id: string; name: string; remaining: number };
 
 export function BookSessionDialog({
   clientId,
   packages,
+  locale,
+  t,
 }: {
   clientId: string;
   packages: EligiblePackage[];
+  locale: Locale;
+  t: Dictionary["clientDetail"];
 }) {
   const [open, setOpen] = useState(false);
   const [packageId, setPackageId] = useState(packages[0]?.id ?? "");
@@ -62,21 +67,21 @@ export function BookSessionDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="secondary">Book Session</Button>} />
+      <DialogTrigger render={<Button variant="secondary">{t.bookSession}</Button>} />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Book Session</DialogTitle>
-          <DialogDescription>Schedule a session against one of this client&apos;s packages.</DialogDescription>
+          <DialogTitle>{t.bookSession}</DialogTitle>
+          <DialogDescription>{t.bookSessionDesc}</DialogDescription>
         </DialogHeader>
 
         {!hasEligiblePackage ? (
           <p className="text-sm text-muted-foreground">
-            This client has no active package with remaining sessions.
+            {t.noEligiblePackages}
           </p>
         ) : (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label>Package</Label>
+              <Label>{t.package}</Label>
               <Select value={packageId} onValueChange={(v) => v && setPackageId(v)}>
                 <SelectTrigger className="w-full">
                   <SelectValue>{(v: string) => packages.find((p) => p.id === v)?.name ?? v}</SelectValue>
@@ -92,7 +97,7 @@ export function BookSessionDialog({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label>Type</Label>
+              <Label>{t.type}</Label>
               <Select value={type} onValueChange={(v) => v && setType(v as TrainingType)}>
                 <SelectTrigger className="w-full">
                   <SelectValue>{(v: string) => label(v)}</SelectValue>
@@ -109,18 +114,18 @@ export function BookSessionDialog({
 
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label>Date</Label>
+                <Label>{t.date}</Label>
                 <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label>Time</Label>
+                <Label>{t.time}</Label>
                 <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
               </div>
             </div>
 
             <DialogFooter>
               <Button onClick={onSubmit} disabled={isPending || !date || !time}>
-                {isPending ? "Booking..." : "Book Session"}
+                {isPending ? t.booking : t.bookSession}
               </Button>
             </DialogFooter>
           </div>

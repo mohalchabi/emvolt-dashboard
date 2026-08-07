@@ -19,15 +19,19 @@ import { CLIENT_STATUSES, label } from "@/lib/constants";
 import { updateClientStatus, assignTrainer, addClientNote } from "@/lib/actions/clients";
 import { updateClientIdNumber } from "@/lib/actions/documents";
 import type { Staff, ActivityLog, Client } from "@/generated/prisma/client";
+import type { Dictionary, Locale } from "@/lib/i18n";
 
 type Props = {
   client: Client;
   trainers: Staff[];
   logs: (ActivityLog & { author: Staff })[];
   canManage: boolean;
+  // `dict`, not `t`: `t` is already the loop variable for trainers below.
+  dict: Dictionary["clientDetail"];
+  locale: Locale;
 };
 
-export function ClientDetailPanel({ client, trainers, logs, canManage }: Props) {
+export function ClientDetailPanel({ client, trainers, logs, canManage, dict, locale }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [note, setNote] = useState("");
@@ -84,19 +88,19 @@ export function ClientDetailPanel({ client, trainers, logs, canManage }: Props) 
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Status</CardTitle>
+          <CardTitle>{dict.statusTitle}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
-            <Label>Status</Label>
+            <Label>{dict.statusTitle}</Label>
             <Select value={client.status} onValueChange={(v) => v && onStatusChange(v)} disabled={isPending || !canManage}>
               <SelectTrigger className="w-full">
-                <SelectValue>{(v: string) => label(v)}</SelectValue>
+                <SelectValue>{(v: string) => label(v, locale)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {CLIENT_STATUSES.map((s) => (
                   <SelectItem key={s} value={s}>
-                    {label(s)}
+                    {label(s, locale)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -104,7 +108,7 @@ export function ClientDetailPanel({ client, trainers, logs, canManage }: Props) 
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>Trainer</Label>
+            <Label>{dict.trainerLabel}</Label>
             <Select
               value={client.assignedTrainerId ?? "none"}
               onValueChange={(v) => v && onTrainerChange(v)}
@@ -112,11 +116,11 @@ export function ClientDetailPanel({ client, trainers, logs, canManage }: Props) 
             >
               <SelectTrigger className="w-full">
                 <SelectValue>
-                  {(v: string) => (v === "none" ? "Unassigned" : trainers.find((t) => t.id === v)?.name ?? v)}
+                  {(v: string) => (v === "none" ? dict.unassigned : trainers.find((t) => t.id === v)?.name ?? v)}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Unassigned</SelectItem>
+                <SelectItem value="none">{dict.unassigned}</SelectItem>
                 {trainers.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     {t.name}
@@ -127,7 +131,7 @@ export function ClientDetailPanel({ client, trainers, logs, canManage }: Props) 
           </div>
 
           <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <Label htmlFor="idNumber">Iqama / National ID number</Label>
+            <Label htmlFor="idNumber">{dict.idNumberLabel}</Label>
             <Input
               id="idNumber"
               key={client.idNumber}
@@ -142,18 +146,18 @@ export function ClientDetailPanel({ client, trainers, logs, canManage }: Props) 
 
       <Card>
         <CardHeader>
-          <CardTitle>Activity</CardTitle>
+          <CardTitle>{dict.activityTitle}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex gap-2">
             <Textarea
-              placeholder="Add a note about this client..."
+              placeholder={dict.addNotePlaceholder}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               className="min-h-16"
             />
             <Button onClick={onAddNote} disabled={isPending || !note.trim()} className="self-end">
-              Add
+              {dict.addNote}
             </Button>
           </div>
 

@@ -53,7 +53,7 @@ export default async function CalendarPage({
     <div className="flex flex-col gap-6">
       <div>
         <div className="flex items-center gap-2">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Calendar</h1>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">{t.calendarPage.title}</h1>
           <HelpTip
             label={t.help.whatIsThis}
             title={t.help.addSession.title}
@@ -62,7 +62,7 @@ export default async function CalendarPage({
           />
         </div>
         <p className="text-sm text-muted-foreground">
-          Trials and client sessions across {isTrainer ? "your schedule" : "all trainers"}.
+          {isTrainer ? t.calendarPage.subtitleOwn : t.calendarPage.subtitleAll}
         </p>
       </div>
 

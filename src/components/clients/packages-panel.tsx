@@ -5,15 +5,20 @@ import { prisma } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { Package } from "@/generated/prisma/client";
+import type { Dictionary, Locale } from "@/lib/i18n";
 
 export async function PackagesPanel({
   clientId,
   section,
   packages,
+  locale,
+  t,
 }: {
   clientId: string;
   section: string;
   packages: Package[];
+  locale: Locale;
+  t: Dictionary["clientDetail"];
 }) {
   const [balances, templates] = await Promise.all([
     packageBalances(packages),
@@ -26,12 +31,12 @@ export async function PackagesPanel({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Packages</CardTitle>
-        <NewPackageDialog clientId={clientId} templates={templates} />
+        <CardTitle>{t.packages}</CardTitle>
+        <NewPackageDialog clientId={clientId} templates={templates} dict={t} />
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {packages.length === 0 && (
-          <p className="text-sm text-muted-foreground">No packages purchased yet.</p>
+          <p className="text-sm text-muted-foreground">{t.noPackages}</p>
         )}
         {packages.map((pkg) => {
           const balance = balances.get(pkg.id) ?? { used: 0, remaining: pkg.totalSessions };
@@ -43,10 +48,10 @@ export async function PackagesPanel({
                 <div className="flex gap-1">
                   {pkg.renewalRequestedAt && (
                     <Badge variant="outline" className="border-amber-500/60 text-amber-400">
-                      Client requested renewal
+                      {t.clientRequestedRenewal}
                     </Badge>
                   )}
-                  {balance.remaining <= 2 && <Badge variant="destructive">Renewal alert</Badge>}
+                  {balance.remaining <= 2 && <Badge variant="destructive">{t.renewalAlert}</Badge>}
                 </div>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -54,17 +59,17 @@ export async function PackagesPanel({
               </div>
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>
-                  {balance.used} / {pkg.totalSessions} sessions used ({balance.remaining} remaining)
+                  {balance.used} / {pkg.totalSessions} {t.sessionsUsed} ({balance.remaining} {t.remaining})
                 </span>
                 <span>{pkg.price.toLocaleString()} SAR</span>
               </div>
               <div className="text-xs text-muted-foreground">
-                Purchased {pkg.purchaseDate.toLocaleDateString()}
-                {pkg.expiryDate ? ` · Expires ${pkg.expiryDate.toLocaleDateString()}` : ""}
-                {pkg.paymentMethod ? ` · Paid via ${label(pkg.paymentMethod)}` : ""}
+                {t.purchased} {pkg.purchaseDate.toLocaleDateString()}
+                {pkg.expiryDate ? ` · ${t.expires} ${pkg.expiryDate.toLocaleDateString()}` : ""}
+                {pkg.paymentMethod ? ` · ${t.paidVia} ${label(pkg.paymentMethod, locale)}` : ""}
               </div>
               {pkg.priceOverrideReason && (
-                <div className="text-xs text-amber-400">Price override: {pkg.priceOverrideReason}</div>
+                <div className="text-xs text-amber-400">{t.priceOverride} {pkg.priceOverrideReason}</div>
               )}
             </div>
           );
