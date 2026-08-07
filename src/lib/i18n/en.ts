@@ -264,12 +264,12 @@ export const en = {
     },
     addSession: {
       title: "Booking a session",
-      body: "Every session a client attends belongs on the calendar. That's what the schedule, the attendance numbers and the client's remaining sessions all read from.",
+      body: "The calendar shows what's already booked — you don't add sessions from here. Sessions are booked from the client's own page, so they come out of the right package.",
       steps: [
-        "Go to Calendar and press New Session.",
-        "Pick the client, the trainer, and the date and time.",
-        "Choose the type — EMS, Pilates or PT.",
-        "After the session, set it to Completed or No-show. Don't leave it as Scheduled.",
+        "Open the client from Clients or My Clients.",
+        "Press Book Session.",
+        "Pick the package it comes out of, then the date and time.",
+        "It appears on this calendar straight away.",
       ],
     },
     myClients: {
