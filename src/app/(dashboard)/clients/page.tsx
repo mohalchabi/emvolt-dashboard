@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/auth-helpers";
 import { packageBalances } from "@/lib/package-balance";
 import { label, CLIENT_STATUSES } from "@/lib/constants";
+import { getDictionary } from "@/lib/i18n";
+import { HelpTip } from "@/components/help/help-tip";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -29,6 +31,7 @@ export default async function ClientsPage({
 }) {
   await requireRole(["admin", "front_desk"]);
   const params = await searchParams;
+  const { t } = await getDictionary();
 
   const [clients, trainers] = await Promise.all([
     prisma.client.findMany({
@@ -67,7 +70,15 @@ export default async function ClientsPage({
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Clients</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-heading text-2xl font-semibold tracking-tight">Clients</h1>
+            <HelpTip
+              label={t.help.whatIsThis}
+              title={t.help.addClient.title}
+              body={t.help.addClient.body}
+              steps={t.help.addClient.steps}
+            />
+          </div>
           <p className="text-sm text-muted-foreground">
             {clients.length} client{clients.length === 1 ? "" : "s"} matching current filters.
           </p>

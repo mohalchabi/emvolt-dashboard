@@ -206,6 +206,82 @@ export const en = {
     couldNotConvert: "Could not convert lead.",
     couldNotAddNote: "Could not add note.",
   },
+  // Copy for the "?" buttons next to the things staff most often get stuck on.
+  // Written as instructions to the person reading them, not descriptions of
+  // the feature.
+  help: {
+    whatIsThis: "What is this?",
+    myLeads: {
+      title: "Your assigned leads",
+      body: "The admin hands out new leads most days. Everyone assigned to you shows up on this page — nobody else sees your list, and you don't see theirs.",
+      steps: [
+        "Contact each new lead the same day it appears, or the next day at the latest.",
+        "Open the lead and use Log Contact to record what happened on the call.",
+        "If they agree to come in, book the trial from that same form — it lands on the calendar automatically.",
+        "Keep going until every lead has moved off \"New\".",
+      ],
+    },
+    leadStatus: {
+      title: "What each status means",
+      body: "The status is how the admin sees your progress, so change it every time something happens with a lead.",
+      steps: [
+        "New — nobody has contacted them yet.",
+        "Contacted — you reached them but nothing is booked.",
+        "Trial Scheduled — they agreed to a trial and it's on the calendar.",
+        "Trial Completed — they came in and did the trial.",
+        "Converted — they bought a package and are now a client.",
+        "Lost — they aren't interested. Pick a reason so we learn from it.",
+      ],
+    },
+    logContact: {
+      title: "Recording a call",
+      body: "Log a contact every single time you try someone — even when they don't pick up. That's how the admin knows the list is being worked.",
+      steps: [
+        "Choose how you reached out: WhatsApp, SMS, or a call.",
+        "Choose what happened. No answer still counts — log it.",
+        "If they booked a trial, pick the trainer, date and time and it's added to the calendar.",
+        "Add a note about what they said so whoever picks this up next knows.",
+      ],
+    },
+    addClient: {
+      title: "Adding a customer",
+      body: "Use New Client for someone who walks in and signs up directly. If they started as a lead, don't add them here — open the lead and use Convert to Client so their history follows them.",
+      steps: [
+        "Press New Client and fill in the name, phone and section.",
+        "Assign the trainer who will be handling them.",
+        "Open the new client and add the package they bought.",
+      ],
+    },
+    packages: {
+      title: "Selling and renewing packages",
+      body: "A package is the block of sessions a client paid for. Sessions count down against it, so a client with no package can't be booked properly.",
+      steps: [
+        "Open the client and press New Package.",
+        "Pick the package type — price and session count fill in for you.",
+        "If you gave a discount, type the reason so the admin can see why.",
+        "When they run low, sell them a new package the same way.",
+      ],
+    },
+    addSession: {
+      title: "Booking a session",
+      body: "Every session a client attends belongs on the calendar. That's what the schedule, the attendance numbers and the client's remaining sessions all read from.",
+      steps: [
+        "Go to Calendar and press New Session.",
+        "Pick the client, the trainer, and the date and time.",
+        "Choose the type — EMS, Pilates or PT.",
+        "After the session, set it to Completed or No-show. Don't leave it as Scheduled.",
+      ],
+    },
+    myClients: {
+      title: "Your clients",
+      body: "The clients assigned to you. Open one to see their remaining sessions, their InBody results, and to message them.",
+      steps: [
+        "Check who is running low on sessions and tell them before they run out.",
+        "Upload a new InBody scan each time they're measured.",
+        "Reply to their messages from the client's page.",
+      ],
+    },
+  },
   logContactForm: {
     title: "Log Contact",
     method: "Method",

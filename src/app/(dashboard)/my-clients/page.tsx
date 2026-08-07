@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/auth-helpers";
 import { packageBalances } from "@/lib/package-balance";
 import { label } from "@/lib/constants";
+import { getDictionary } from "@/lib/i18n";
+import { HelpTip } from "@/components/help/help-tip";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -23,6 +25,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 
 export default async function MyClientsPage() {
   const session = await requireRole(["trainer"]);
+  const { t } = await getDictionary();
 
   const [clients, templates] = await Promise.all([
     prisma.client.findMany({
@@ -46,7 +49,15 @@ export default async function MyClientsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">My Clients</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-heading text-2xl font-semibold tracking-tight">My Clients</h1>
+            <HelpTip
+              label={t.help.whatIsThis}
+              title={t.help.myClients.title}
+              body={t.help.myClients.body}
+              steps={t.help.myClients.steps}
+            />
+          </div>
           <p className="text-sm text-muted-foreground">
             {clients.length} client{clients.length === 1 ? "" : "s"} assigned to you.
           </p>

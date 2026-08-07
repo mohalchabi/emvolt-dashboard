@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { HelpTip } from "@/components/help/help-tip";
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   new: "outline",
@@ -39,20 +40,34 @@ export default async function MyLeadsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">{t.myLeadsPage.title}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">{t.myLeadsPage.title}</h1>
+          <HelpTip
+            label={t.help.whatIsThis}
+            title={t.help.myLeads.title}
+            body={t.help.myLeads.body}
+            steps={t.help.myLeads.steps}
+          />
+        </div>
         <p className="text-sm text-muted-foreground">
           {leads.length} {leads.length === 1 ? t.myLeadsPage.assignedSingular : t.myLeadsPage.assignedPlural}{" "}
           {t.myLeadsPage.updateHint}
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {LEAD_STATUSES.map((s) => (
           <Badge key={s} variant={STATUS_VARIANT[s]} className="gap-1">
             {label(s, locale)}
             <span className="opacity-70">{counts[s] ?? 0}</span>
           </Badge>
         ))}
+        <HelpTip
+          label={t.help.whatIsThis}
+          title={t.help.leadStatus.title}
+          body={t.help.leadStatus.body}
+          steps={t.help.leadStatus.steps}
+        />
       </div>
 
       {leads.length === 0 ? (
