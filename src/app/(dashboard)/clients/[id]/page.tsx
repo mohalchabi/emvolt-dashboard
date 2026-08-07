@@ -11,15 +11,9 @@ import { PackagesPanel } from "@/components/clients/packages-panel";
 import { InbodyPanel } from "@/components/clients/inbody-panel";
 import { MessagesPanel } from "@/components/clients/messages-panel";
 import { BookSessionDialog } from "@/components/clients/book-session-dialog";
+import { SessionStatusMenu } from "@/components/calendar/session-status-menu";
 import { PreviewAsClientButton } from "@/components/clients/preview-as-client-button";
 import { DocumentsPanel } from "@/components/clients/documents-panel";
-
-const SESSION_STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  scheduled: "outline",
-  completed: "default",
-  cancelled: "secondary",
-  no_show: "destructive",
-};
 
 export default async function ClientDetailPage({
   params,
@@ -131,7 +125,7 @@ export default async function ClientDetailPage({
                       {s.datetime.toLocaleDateString()} {s.datetime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
-                  <Badge variant={SESSION_STATUS_VARIANT[s.status]}>{label(s.status)}</Badge>
+                  <SessionStatusMenu sessionId={s.id} status={s.status} />
                 </div>
               ))}
               {sessions.length === 0 && (
