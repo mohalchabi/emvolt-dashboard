@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { put, del } from "@vercel/blob";
 import type { ZodType } from "zod";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/auth-helpers";
+import { requireRole, requireSession } from "@/lib/auth-helpers";
 import { PETTY_CASH_CATEGORY } from "@/lib/constants";
 import {
   walletDepositSchema,
@@ -73,6 +73,69 @@ async function uploadReceipts(folder: string, files: File[], uploadedById: strin
 function revalidateWallet() {
   revalidatePath("/wallet");
   revalidatePath("/wallet/petty-cash");
+  // The holder's own view reads the same rows, so anything filed from either
+  // side has to invalidate both or the two screens disagree about what's left.
+  revalidatePath("/my-petty-cash");
+}
+
+/** The float an expense is being filed against, or a message saying it's gone. */
+async function loadPettyCashFloat(issueId: string) {
+  const issue = await prisma.walletTransaction.findUnique({ where: { id: issueId } });
+  if (!issue || issue.category !== PETTY_CASH_CATEGORY) {
+    throw new Error("That petty cash float no longer exists.");
+  }
+  return issue;
+}
+
+/**
+ * Everything after "is this person allowed to file against this float".
+ * Authorization deliberately stays in the callers: widening the holder's path
+ * can then never quietly widen the admin's, or the other way round.
+ */
+async function savePettyCashExpense({
+  formData,
+  issueId,
+  recordedById,
+  requireInvoice,
+}: {
+  formData: FormData;
+  issueId: string;
+  recordedById: string;
+  /** Holders must photograph the bill; admins can key one in and attach later. */
+  requireInvoice: boolean;
+}) {
+  const data = parseOrThrow(pettyCashExpenseSchema, {
+    issueId,
+    amount: text(formData, "amount"),
+    vatAmount: text(formData, "vatAmount"),
+    vendor: text(formData, "vendor"),
+    vatNumber: text(formData, "vatNumber"),
+    description: text(formData, "description"),
+    spentAt: text(formData, "spentAt"),
+  });
+
+  const files = readReceipts(formData);
+  if (requireInvoice && files.length === 0) {
+    throw new Error("Attach a photo or a PDF of the invoice.");
+  }
+  const attachments = await uploadReceipts(`petty-cash/${issueId}`, files, recordedById);
+
+  const expense = await prisma.pettyCashExpense.create({
+    data: {
+      issueId,
+      amount: data.amount,
+      vatAmount: data.vatAmount,
+      vendor: data.vendor,
+      vatNumber: data.vatNumber,
+      description: data.description,
+      spentAt: parseDateOnly(data.spentAt),
+      recordedById,
+      attachments: { create: attachments },
+    },
+  });
+
+  revalidateWallet();
+  return expense;
 }
 
 export async function recordWalletDeposit(formData: FormData) {
@@ -147,41 +210,40 @@ export async function recordWalletTransaction(formData: FormData) {
 
 export async function recordPettyCashExpense(formData: FormData) {
   const session = await requireRole(["admin"]);
+  const issue = await loadPettyCashFloat(text(formData, "issueId"));
 
-  const data = parseOrThrow(pettyCashExpenseSchema, {
-    issueId: text(formData, "issueId"),
-    amount: text(formData, "amount"),
-    vatAmount: text(formData, "vatAmount"),
-    vendor: text(formData, "vendor"),
-    vatNumber: text(formData, "vatNumber"),
-    description: text(formData, "description"),
-    spentAt: text(formData, "spentAt"),
+  return savePettyCashExpense({
+    formData,
+    issueId: issue.id,
+    recordedById: session.user.id,
+    requireInvoice: false,
   });
+}
 
-  const issue = await prisma.walletTransaction.findUnique({ where: { id: data.issueId } });
-  if (!issue || issue.category !== PETTY_CASH_CATEGORY) {
-    throw new Error("That petty cash float no longer exists.");
+/**
+ * The same thing, filed by the person actually carrying the float rather than
+ * by an admin transcribing their receipts afterwards.
+ *
+ * Any signed-in staff member may call this, but only against a float issued to
+ * them — the float is re-read from the database and its holder compared to the
+ * session, so a guessed `issueId` from someone else's float is rejected rather
+ * than trusted from the form. The invoice is mandatory here: the whole point of
+ * pushing this to the holder is that they have the bill in their hand.
+ */
+export async function recordOwnPettyCashExpense(formData: FormData) {
+  const session = await requireSession();
+  const issue = await loadPettyCashFloat(text(formData, "issueId"));
+
+  if (issue.payeeStaffId !== session.user.id) {
+    throw new Error("That petty cash float isn't yours.");
   }
 
-  const files = readReceipts(formData);
-  const attachments = await uploadReceipts(`petty-cash/${issue.id}`, files, session.user.id);
-
-  const expense = await prisma.pettyCashExpense.create({
-    data: {
-      issueId: issue.id,
-      amount: data.amount,
-      vatAmount: data.vatAmount,
-      vendor: data.vendor,
-      vatNumber: data.vatNumber,
-      description: data.description,
-      spentAt: parseDateOnly(data.spentAt),
-      recordedById: session.user.id,
-      attachments: { create: attachments },
-    },
+  return savePettyCashExpense({
+    formData,
+    issueId: issue.id,
+    recordedById: session.user.id,
+    requireInvoice: true,
   });
-
-  revalidateWallet();
-  return expense;
 }
 
 /** Attach more paperwork to an entry that already exists. */
