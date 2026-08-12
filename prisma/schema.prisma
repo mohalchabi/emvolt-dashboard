@@ -39,6 +39,7 @@ model Staff {
   walletPaymentsRecorded     WalletTransaction[] @relation("WalletTransactionRecordedBy")
   walletPaymentsReceived     WalletTransaction[] @relation("WalletTransactionPayee")
   pettyCashExpensesRecorded  PettyCashExpense[]  @relation("PettyCashExpenseRecordedBy")
+  pettyCashExpensesSpent     PettyCashExpense[]  @relation("PettyCashExpenseSpentBy")
   walletAttachments          WalletAttachment[]  @relation("WalletAttachmentUploadedBy")
 }
 
@@ -374,14 +375,23 @@ model PettyCashExpense {
   description String?
   spentAt   DateTime
 
+  // Who keyed the invoice in — the holder filing their own purchase, or an
+  // admin transcribing a receipt handed over at the desk.
   recordedById String
   recordedBy   Staff    @relation("PettyCashExpenseRecordedBy", fields: [recordedById], references: [id])
+  // Who actually spent the money. Usually the float's holder, but not always:
+  // floats get shared around the gym, and reporting on spend per person is
+  // wrong if it silently credits every purchase to whoever carries the cash.
+  // Null only for rows predating the column that couldn't be attributed.
+  spentById String?
+  spentBy   Staff?  @relation("PettyCashExpenseSpentBy", fields: [spentById], references: [id])
   createdAt    DateTime @default(now())
 
   attachments WalletAttachment[] @relation("WalletAttachmentPettyCashExpense")
 
   @@index([issueId])
   @@index([spentAt])
+  @@index([spentById])
 }
 
 // Proof for a wallet entry — the bank transfer slip, or the photographed /

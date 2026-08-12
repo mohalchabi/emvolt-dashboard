@@ -42,7 +42,7 @@ export default async function PettyCashPage({
   const range = isMonthKey(month) ? monthRange(month) : null;
   const period = range ? month! : ALL_TIME;
 
-  const [floats, firstFloat] = await Promise.all([
+  const [floats, firstFloat, staff] = await Promise.all([
     prisma.walletTransaction.findMany({
       where: {
         category: PETTY_CASH_CATEGORY,
@@ -52,7 +52,10 @@ export default async function PettyCashPage({
         attachments: { orderBy: { createdAt: "asc" } },
         payeeStaff: { select: { id: true, name: true } },
         pettyCashSpend: {
-          include: { attachments: { orderBy: { createdAt: "asc" } } },
+          include: {
+            attachments: { orderBy: { createdAt: "asc" } },
+            spentBy: { select: { id: true, name: true } },
+          },
           orderBy: [{ spentAt: "desc" }, { createdAt: "desc" }],
         },
       },
@@ -62,6 +65,11 @@ export default async function PettyCashPage({
       where: { category: PETTY_CASH_CATEGORY },
       orderBy: { paidAt: "asc" },
       select: { paidAt: true },
+    }),
+    prisma.staff.findMany({
+      where: { active: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
     }),
   ]);
 
@@ -234,6 +242,8 @@ export default async function PettyCashPage({
                     issueId={float.id}
                     holderName={holder}
                     remaining={remaining}
+                    holderId={float.payeeStaff?.id ?? null}
+                    staff={staff}
                   />
                 </div>
               </CardHeader>
@@ -267,6 +277,13 @@ export default async function PettyCashPage({
                               {expense.vatNumber && (
                                 <div className="text-xs text-muted-foreground">
                                   VAT {expense.vatNumber}
+                                </div>
+                              )}
+                              {/* Only worth showing when it contradicts the
+                                  float — otherwise it repeats the card header. */}
+                              {expense.spentBy && expense.spentBy.id !== float.payeeStaff?.id && (
+                                <div className="text-xs text-amber-500">
+                                  bought by {expense.spentBy.name}
                                 </div>
                               )}
                             </TableCell>

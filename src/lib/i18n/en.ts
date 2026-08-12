@@ -470,6 +470,17 @@ export const en = {
           "Reply to client messages from their page.",
         ],
       },
+      pettyCash: {
+        title: "Logging what you spend from your float",
+        duration: "1:10",
+        points: [
+          "If you're carrying cash for the gym, \"My Petty Cash\" shows what's still on you.",
+          "Log each purchase as you make it — don't save the receipts for later.",
+          "The bill is required: photograph it, pick it from your gallery, or attach a PDF.",
+          "What you log reaches the office straight away, so there's nothing to send on separately.",
+        ],
+        warn: "Cash with no bill against it stays on you. Logging it the same day is what keeps your float straight.",
+      },
     },
   },
 };

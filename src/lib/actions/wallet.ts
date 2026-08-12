@@ -96,11 +96,14 @@ async function savePettyCashExpense({
   formData,
   issueId,
   recordedById,
+  spentById,
   requireInvoice,
 }: {
   formData: FormData;
   issueId: string;
   recordedById: string;
+  /** Who made the purchase, as opposed to who is keying it in. */
+  spentById: string | null;
   /** Holders must photograph the bill; admins can key one in and attach later. */
   requireInvoice: boolean;
 }) {
@@ -130,6 +133,7 @@ async function savePettyCashExpense({
       description: data.description,
       spentAt: parseDateOnly(data.spentAt),
       recordedById,
+      spentById,
       attachments: { create: attachments },
     },
   });
@@ -212,10 +216,15 @@ export async function recordPettyCashExpense(formData: FormData) {
   const session = await requireRole(["admin"]);
   const issue = await loadPettyCashFloat(text(formData, "issueId"));
 
+  // The admin is transcribing someone else's receipt, so the purchase belongs
+  // to the float's holder unless they say a colleague actually made it.
+  const spentById = text(formData, "spentById") || issue.payeeStaffId;
+
   return savePettyCashExpense({
     formData,
     issueId: issue.id,
     recordedById: session.user.id,
+    spentById,
     requireInvoice: false,
   });
 }
@@ -238,10 +247,12 @@ export async function recordOwnPettyCashExpense(formData: FormData) {
     throw new Error("That petty cash float isn't yours.");
   }
 
+  // Filing your own purchase, so there is nobody else it could belong to.
   return savePettyCashExpense({
     formData,
     issueId: issue.id,
     recordedById: session.user.id,
+    spentById: session.user.id,
     requireInvoice: true,
   });
 }
