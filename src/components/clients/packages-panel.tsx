@@ -32,7 +32,12 @@ export async function PackagesPanel({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t.packages}</CardTitle>
-        <NewPackageDialog clientId={clientId} templates={templates} dict={t} />
+        <NewPackageDialog
+          clientId={clientId}
+          templates={templates}
+          dict={t}
+          hasExistingPackages={packages.length > 0}
+        />
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {packages.length === 0 && (
@@ -46,6 +51,7 @@ export async function PackagesPanel({
               <div className="flex items-center justify-between">
                 <span className="font-medium">{pkg.name}</span>
                 <div className="flex gap-1">
+                  {pkg.isRenewal && <Badge variant="secondary">{t.renewalBadge}</Badge>}
                   {pkg.renewalRequestedAt && (
                     <Badge variant="outline" className="border-amber-500/60 text-amber-400">
                       {t.clientRequestedRenewal}

@@ -200,6 +200,7 @@ export async function createPackage(input: CreatePackageInput) {
       price: data.price,
       priceOverrideReason: template && template.price !== data.price ? data.priceOverrideReason?.trim() : null,
       paymentMethod: data.paymentMethod || null,
+      isRenewal: data.isRenewal ?? false,
       purchaseDate,
       expiryDate,
     },
@@ -219,7 +220,9 @@ export async function createPackage(input: CreatePackageInput) {
     data: {
       clientId: data.clientId,
       authorId: session.user.id,
-      text: `Purchased ${data.name} (${data.totalSessions} sessions)${priceNote}${paymentNote}${scheduleNote}.`,
+      // The activity feed is what staff actually read back, so the renewal
+      // shows up there in words rather than only as a flag on the row.
+      text: `${pkg.isRenewal ? "Renewed" : "Purchased"} ${data.name} (${data.totalSessions} sessions)${priceNote}${paymentNote}${scheduleNote}.`,
     },
   });
 

@@ -1,6 +1,12 @@
 import type { StaffRole } from "@/lib/constants";
 
-export type TutorialKey = "leads" | "sessions" | "newClient" | "followUp";
+export type TutorialKey =
+  | "leads"
+  | "sessions"
+  | "newClient"
+  | "followUp"
+  | "pettyCash"
+  | "renewal";
 
 export type Tutorial = {
   key: TutorialKey;
@@ -47,6 +53,18 @@ export const TUTORIALS: Tutorial[] = [
     poster: "/tutorials/follow-up.jpg",
     audience: ["trainer"],
   },
+  {
+    key: "pettyCash",
+    video: "/tutorials/petty-cash.mp4",
+    poster: "/tutorials/petty-cash.jpg",
+    audience: ["trainer", "front_desk"],
+  },
+  {
+    key: "renewal",
+    video: "/tutorials/renewal.mp4",
+    poster: "/tutorials/renewal.jpg",
+    audience: ["trainer", "front_desk"],
+  },
 ];
 
 /**
@@ -55,6 +73,6 @@ export const TUTORIALS: Tutorial[] = [
  * regardless of how much ICU data the server was built with.
  */
 export const CHAPTER_NUMERALS: Record<"en" | "ar", string[]> = {
-  en: ["1", "2", "3", "4"],
-  ar: ["١", "٢", "٣", "٤"],
+  en: ["1", "2", "3", "4", "5", "6"],
+  ar: ["١", "٢", "٣", "٤", "٥", "٦"],
 };

@@ -15,6 +15,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { recordPettyCashExpense } from "@/lib/actions/wallet";
 import { localDateString } from "@/lib/utils";
@@ -29,13 +36,19 @@ export function RecordPettyCashBillDialog({
   issueId,
   holderName,
   remaining,
+  holderId,
+  staff,
 }: {
   issueId: string;
   holderName: string;
   remaining: number;
+  /** The float's holder — who a purchase belongs to unless told otherwise. */
+  holderId: string | null;
+  staff: { id: string; name: string }[];
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [spentBy, setSpentBy] = useState(holderId ?? "");
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
 
@@ -43,6 +56,7 @@ export function RecordPettyCashBillDialog({
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     formData.set("issueId", issueId);
+    formData.set("spentById", spentBy);
 
     startTransition(async () => {
       try {
@@ -114,6 +128,27 @@ export function RecordPettyCashBillDialog({
                 step="0.01"
               />
             </div>
+          </div>
+
+          {/* Floats get shared around the gym, so who spent it isn't always who
+              carries it. Defaults to the holder — change it only when someone
+              else made the purchase, or spend-per-person reports go wrong. */}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={`bill-spentBy-${issueId}`}>Who bought it</Label>
+            <Select value={spentBy} onValueChange={(v) => setSpentBy(String(v ?? ""))}>
+              <SelectTrigger id={`bill-spentBy-${issueId}`} className="w-full">
+                <SelectValue placeholder="Choose...">
+                  {(v: string) => staff.find((s) => s.id === v)?.name ?? "Choose..."}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {staff.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex flex-col gap-1.5">

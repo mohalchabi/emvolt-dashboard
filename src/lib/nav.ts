@@ -11,6 +11,7 @@ export type NavKey =
   | "staff"
   | "packageTypes"
   | "wallet"
+  | "myPettyCash"
   | "help";
 
 export type NavItem = {
@@ -37,6 +38,18 @@ export const NAV_ITEMS: NavItem[] = [
   // reachable — new staff are pointed here on their first shift.
   { href: "/help", labelKey: "help", roles: ["admin", "trainer", "front_desk"] },
 ];
+
+/**
+ * Deliberately not in NAV_ITEMS. Petty cash is issued to individuals, so this
+ * tab follows the float rather than the role — the dashboard layout appends it
+ * only for staff actually carrying one, and admins reach the same rows through
+ * the full ledger at /wallet instead.
+ */
+export const MY_PETTY_CASH_NAV: NavItem = {
+  href: "/my-petty-cash",
+  labelKey: "myPettyCash",
+  roles: ["trainer", "front_desk"],
+};
 
 export function navForRole(role: StaffRole): NavItem[] {
   return NAV_ITEMS.filter((item) => item.roles.includes(role));

@@ -32,6 +32,8 @@ export const createPackageSchema = z.object({
   priceOverrideReason: z.string().optional().nullable(),
   expiryDate: z.string().optional().nullable(),
   paymentMethod: z.enum(PAYMENT_METHODS).optional().nullable(),
+  // Ticked when this continues an existing membership rather than starting one.
+  isRenewal: z.boolean().optional(),
   // Optional upfront scheduling — one datetime ("YYYY-MM-DDTHH:mm") per
   // session the trainer wants to book right away; the rest can be booked
   // later from the client's profile.
