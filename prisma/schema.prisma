@@ -180,6 +180,11 @@ model Package {
   // Set when the client taps "Request Renewal" in the portal; cleared when
   // staff sells them a new package. Null = no open request.
   renewalRequestedAt DateTime?
+  // Whether staff sold this as a renewal of an existing membership rather than
+  // a first purchase. Recorded as intent rather than inferred from "has an
+  // earlier package": a client can hold two packages at once (a PT block plus
+  // a class pass) without either being a renewal.
+  isRenewal Boolean @default(false)
 
   sessions Session[]
 

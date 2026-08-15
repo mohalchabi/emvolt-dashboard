@@ -33,6 +33,7 @@ export function SessionDatesFields({
   onSessionTypeChange,
   slots,
   onSlotsChange,
+  labels,
 }: {
   enabled: boolean;
   onEnabledChange: (enabled: boolean) => void;
@@ -41,6 +42,8 @@ export function SessionDatesFields({
   onSessionTypeChange: (t: TrainingType) => void;
   slots: SessionSlot[];
   onSlotsChange: (slots: SessionSlot[]) => void;
+  /** Optional so the walk-in dialog keeps its existing English copy untouched. */
+  labels?: { scheduleNow: string; sessionType: string };
 }) {
   function updateSlot(i: number, patch: Partial<SessionSlot>) {
     const next = slots.slice();
@@ -65,13 +68,13 @@ export function SessionDatesFields({
     <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
       <label className="flex items-center gap-2 text-sm font-medium">
         <Checkbox checked={enabled} onCheckedChange={(c) => onEnabledChange(c === true)} />
-        Schedule sessions now (optional)
+        {labels?.scheduleNow ?? "Schedule sessions now (optional)"}
       </label>
 
       {enabled && (
         <>
           <div className="flex items-center justify-between gap-3">
-            <Label className="shrink-0">Session type</Label>
+            <Label className="shrink-0">{labels?.sessionType ?? "Session type"}</Label>
             <Select value={sessionType} onValueChange={(v) => v && onSessionTypeChange(v as TrainingType)}>
               <SelectTrigger className="w-40">
                 <SelectValue>{(v: string) => label(v)}</SelectValue>

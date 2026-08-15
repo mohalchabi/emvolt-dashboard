@@ -30,6 +30,7 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -51,12 +52,15 @@ export function NewPackageDialog({
   clientId,
   templates,
   dict,
+  hasExistingPackages,
 }: {
   clientId: string;
   templates: PackageTemplate[];
   // Named `dict` rather than `t` because `t` is already the loop variable for
   // package templates further down this file.
   dict: Dictionary["clientDetail"];
+  /** Pre-ticks "this is a renewal" — the usual case for a returning client. */
+  hasExistingPackages: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -79,6 +83,7 @@ export function NewPackageDialog({
       priceOverrideReason: "",
       expiryDate: null,
       paymentMethod: null,
+      isRenewal: hasExistingPackages,
     },
   });
 
@@ -116,6 +121,8 @@ export function NewPackageDialog({
       priceOverrideReason: "",
       expiryDate: null,
       paymentMethod: form.getValues("paymentMethod"),
+      // Switching package type shouldn't silently un-tick the renewal.
+      isRenewal: form.getValues("isRenewal"),
     });
   }
 
@@ -134,7 +141,7 @@ export function NewPackageDialog({
         setSlots(emptySlots(templates[0]?.sessions ?? 12));
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not add package.");
+        toast.error(err instanceof Error ? err.message : dict.couldNotAddPackage);
       }
     });
   }
@@ -145,23 +152,23 @@ export function NewPackageDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{dict.addPackage}</DialogTitle>
-          <DialogDescription>Record a new session package purchase for this client.</DialogDescription>
+          <DialogDescription>{dict.addPackageDesc}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
             <FormItem>
-              <FormLabel>Package type</FormLabel>
+              <FormLabel>{dict.packageType}</FormLabel>
               <Select value={templateChoice} onValueChange={(v) => v && onTemplateChange(v)}>
                 <FormControl>
                   <SelectTrigger className="w-full">
                     <SelectValue>
                       {(v: string) =>
                         v === CUSTOM
-                          ? "Custom package"
+                          ? dict.customPackage
                           : (() => {
                               const t = templates.find((x) => x.id === v);
-                              return t ? `${t.name} — ${t.sessions} sessions — ${t.price.toLocaleString()} SAR` : v;
+                              return t ? `${t.name} — ${t.sessions} ${dict.sessionsWord} — ${t.price.toLocaleString()} ${dict.sarWord}` : v;
                             })()
                       }
                     </SelectValue>
@@ -173,12 +180,12 @@ export function NewPackageDialog({
                       <span className="flex min-w-0 flex-col whitespace-normal py-0.5">
                         <span className="truncate font-medium">{t.name}</span>
                         <span className="text-xs text-muted-foreground">
-                          {t.sessions} sessions · {t.durationDays} days · {t.price.toLocaleString()} SAR
+                          {t.sessions} {dict.sessionsWord} · {t.durationDays} {dict.daysWord} · {t.price.toLocaleString()} {dict.sarWord}
                         </span>
                       </span>
                     </SelectItem>
                   ))}
-                  <SelectItem value={CUSTOM}>Custom package</SelectItem>
+                  <SelectItem value={CUSTOM}>{dict.customPackage}</SelectItem>
                 </SelectContent>
               </Select>
             </FormItem>
@@ -188,9 +195,9 @@ export function NewPackageDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Package name</FormLabel>
+                  <FormLabel>{dict.packageName}</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. 12-Session EMS Pack" {...field} disabled={!!selectedTemplate} />
+                    <Input placeholder={dict.packageNamePlaceholder} {...field} disabled={!!selectedTemplate} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -203,7 +210,7 @@ export function NewPackageDialog({
                 name="totalSessions"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Total sessions</FormLabel>
+                    <FormLabel>{dict.totalSessions}</FormLabel>
                     <FormControl>
                       <Input type="number" min={1} {...field} value={field.value as number} disabled={!!selectedTemplate} />
                     </FormControl>
@@ -217,7 +224,7 @@ export function NewPackageDialog({
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Price (SAR)</FormLabel>
+                    <FormLabel>{dict.price}</FormLabel>
                     <FormControl>
                       <Input type="number" min={0} step="0.01" {...field} value={field.value as number} />
                     </FormControl>
@@ -229,7 +236,7 @@ export function NewPackageDialog({
 
             {selectedTemplate && (
               <Button type="button" variant="outline" size="sm" onClick={applyDiscount} className="self-start">
-                Apply 45% Off ({Math.round(selectedTemplate.price * (1 - DISCOUNT_RATE)).toLocaleString()} SAR)
+                {dict.applyDiscount} ({Math.round(selectedTemplate.price * (1 - DISCOUNT_RATE)).toLocaleString()} {dict.sarWord})
               </Button>
             )}
 
@@ -240,9 +247,9 @@ export function NewPackageDialog({
                 rules={{ required: true }}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Reason for price change</FormLabel>
+                    <FormLabel>{dict.priceReason}</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Summer offer, referral discount..." {...field} value={field.value ?? ""} />
+                      <Input placeholder={dict.priceReasonPlaceholder} {...field} value={field.value ?? ""} />
                     </FormControl>
                     <p className="text-xs text-muted-foreground">
                       Required — the listed price for {selectedTemplate?.name} is{" "}
@@ -256,8 +263,7 @@ export function NewPackageDialog({
 
             {selectedTemplate ? (
               <p className="text-xs text-muted-foreground">
-                Sessions must be used within {selectedTemplate.durationDays} days of purchase — the
-                expiry date is set automatically.
+                {dict.expiryAutoHint.replace("{days}", String(selectedTemplate.durationDays))}
               </p>
             ) : (
               <FormField
@@ -265,7 +271,7 @@ export function NewPackageDialog({
                 name="expiryDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Expiry date (optional)</FormLabel>
+                    <FormLabel>{dict.expiryDate}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} value={field.value ?? ""} />
                     </FormControl>
@@ -280,11 +286,11 @@ export function NewPackageDialog({
               name="paymentMethod"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Paid via (optional)</FormLabel>
+                  <FormLabel>{dict.paidViaOptional}</FormLabel>
                   <Select value={field.value ?? undefined} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Choose...">{(v: string) => label(v)}</SelectValue>
+                        <SelectValue placeholder={dict.choose}>{(v: string) => label(v)}</SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -300,7 +306,36 @@ export function NewPackageDialog({
               )}
             />
 
+            {/* Pre-ticked when the client already holds a package, since that's
+                the common case — staff untick it for a genuinely separate
+                purchase (a class pass alongside a PT block). */}
+            <FormField
+              control={form.control}
+              name="isRenewal"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-start gap-2 rounded-lg border border-border p-3">
+                    <FormControl>
+                      <Checkbox
+                        id="pkg-is-renewal"
+                        checked={!!field.value}
+                        onCheckedChange={(v) => field.onChange(!!v)}
+                      />
+                    </FormControl>
+                    <div className="flex flex-col gap-0.5">
+                      <FormLabel htmlFor="pkg-is-renewal" className="cursor-pointer">
+                        {dict.isRenewal}
+                      </FormLabel>
+                      <span className="text-xs text-muted-foreground">{dict.isRenewalHint}</span>
+                    </div>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <SessionDatesFields
+              labels={{ scheduleNow: dict.scheduleNow, sessionType: dict.sessionTypeLabel }}
               enabled={scheduleEnabled}
               onEnabledChange={setScheduleEnabled}
               totalSessions={Number(watchedTotalSessions) || 0}
@@ -315,7 +350,7 @@ export function NewPackageDialog({
                 type="submit"
                 disabled={isPending || (priceDiffersFromTemplate && !form.watch("priceOverrideReason")?.trim())}
               >
-                {isPending ? "Adding..." : "Add Package"}
+                {isPending ? dict.addingPackage : dict.addPackage}
               </Button>
             </DialogFooter>
           </form>
