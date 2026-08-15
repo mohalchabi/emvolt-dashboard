@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientDetailPanel } from "@/components/clients/client-detail-panel";
 import { PackagesPanel } from "@/components/clients/packages-panel";
+import { MergeClientDialog } from "@/components/clients/merge-client-dialog";
 import { InbodyPanel } from "@/components/clients/inbody-panel";
 import { MessagesPanel } from "@/components/clients/messages-panel";
 import { BookSessionDialog } from "@/components/clients/book-session-dialog";
@@ -64,6 +65,23 @@ export default async function ClientDetailPage({
     }),
   ]);
 
+  // Duplicates are the whole reason merging exists, so same-phone matches sort
+  // to the top; the rest of the list is there for a duplicate typed in with a
+  // mistyped number. Admin-only, and only loaded for them.
+  const mergeCandidates =
+    session.user.role === "admin"
+      ? (
+          await prisma.client.findMany({
+            where: { id: { not: client.id } },
+            select: { id: true, name: true, phone: true },
+            orderBy: { name: "asc" },
+            take: 300,
+          })
+        )
+          .map((c) => ({ ...c, samePhone: c.phone === client.phone }))
+          .sort((a, b) => Number(b.samePhone) - Number(a.samePhone))
+      : [];
+
   const backHref = canManage ? "/clients" : "/my-clients";
 
   const activePackages = client.packages.filter((p) => !p.expiryDate || p.expiryDate > new Date());
@@ -82,6 +100,14 @@ export default async function ClientDetailPage({
           <h1 className="font-heading text-2xl font-semibold tracking-tight">{client.name}</h1>
           <Badge variant="outline">{label(client.section, locale)}</Badge>
           {session.user.role === "admin" && <PreviewAsClientButton clientId={client.id} />}
+          {session.user.role === "admin" && (
+            <MergeClientDialog
+              clientId={client.id}
+              clientName={client.name}
+              candidates={mergeCandidates}
+              t={t.clientDetail}
+            />
+          )}
         </div>
         <p className="text-sm text-muted-foreground">
           {client.phone}

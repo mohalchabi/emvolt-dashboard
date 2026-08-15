@@ -15,6 +15,8 @@ import {
   createPackageSchema,
   bookClientSessionSchema,
   createWalkInClientSchema,
+  mergeClientSchema,
+  type MergeClientInput,
   type CreateClientInput,
   type CreatePackageInput,
   type BookClientSessionInput,
@@ -408,4 +410,89 @@ export async function sendStaffMessage(input: { clientId: string; text: string }
   });
 
   revalidatePath(`/clients/${input.clientId}`);
+}
+
+/**
+ * Folds a duplicate client record into the real one.
+ *
+ * Staff create duplicates by reaching for "New client" when a returning member
+ * renews — which also splits the member in the customer portal, since sign-in
+ * matches on phone and two rows turn a straight login into an account picker.
+ * Nothing in the app could undo that: clients and packages have no delete, and
+ * marking the duplicate churned doesn't help because the portal lookup ignores
+ * status.
+ *
+ * Everything hanging off `sourceClientId` is repointed at `targetClientId` and
+ * the source row is deleted, all in one transaction so a partial merge can't
+ * leave a member's history split across two records.
+ */
+export async function mergeClientInto(input: MergeClientInput) {
+  const session = await requireRole(["admin"]);
+  const { sourceClientId, targetClientId } = mergeClientSchema.parse(input);
+
+  const [source, target] = await Promise.all([
+    prisma.client.findUnique({ where: { id: sourceClientId } }),
+    prisma.client.findUnique({ where: { id: targetClientId } }),
+  ]);
+  if (!source) throw new Error("That client no longer exists.");
+  if (!target) throw new Error("Could not find the client to merge into.");
+
+  await prisma.$transaction(async (tx) => {
+    const move = { where: { clientId: sourceClientId }, data: { clientId: targetClientId } };
+    await tx.package.updateMany(move);
+    await tx.session.updateMany(move);
+    await tx.recurringSlot.updateMany(move);
+    await tx.activityLog.updateMany(move);
+    await tx.inBodyResult.updateMany(move);
+    await tx.message.updateMany(move);
+    await tx.clientDocument.updateMany(move);
+
+    // Details the duplicate captured and the surviving record is missing would
+    // otherwise be lost with the row. Only ever fills blanks — anything already
+    // on the target wins, since that's the record staff have been curating.
+    const fillBlanks = {
+      ...(target.email ? {} : source.email ? { email: source.email } : {}),
+      ...(target.idNumber ? {} : source.idNumber ? { idNumber: source.idNumber } : {}),
+      ...(target.source ? {} : source.source ? { source: source.source } : {}),
+      ...(target.assignedTrainerId
+        ? {}
+        : source.assignedTrainerId
+          ? { assignedTrainerId: source.assignedTrainerId }
+          : {}),
+    };
+
+    // `convertedFromLeadId` is unique, so the link can only survive if the
+    // target doesn't already have one. Clear it off the source first or the
+    // two rows collide mid-transaction.
+    const canMoveLead = !target.convertedFromLeadId && !!source.convertedFromLeadId;
+    if (canMoveLead) {
+      await tx.client.update({
+        where: { id: sourceClientId },
+        data: { convertedFromLeadId: null },
+      });
+    }
+
+    await tx.client.update({
+      where: { id: targetClientId },
+      data: {
+        ...fillBlanks,
+        ...(canMoveLead ? { convertedFromLeadId: source.convertedFromLeadId } : {}),
+      },
+    });
+
+    await tx.client.delete({ where: { id: sourceClientId } });
+
+    await tx.activityLog.create({
+      data: {
+        clientId: targetClientId,
+        authorId: session.user.id,
+        text: `Merged duplicate record "${source.name}" (${source.phone}) into this client.`,
+      },
+    });
+  });
+
+  revalidatePath("/clients");
+  revalidatePath("/my-clients");
+  revalidatePath(`/clients/${targetClientId}`);
+  return { targetClientId };
 }
