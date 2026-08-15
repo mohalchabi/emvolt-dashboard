@@ -21,6 +21,19 @@ export const assignTrainerSchema = z.object({
   assignedTrainerId: z.string().nullable(),
 });
 
+// Folding a duplicate record into the real one. `sourceClientId` is the record
+// that disappears, so the UI always states which of the two is being deleted.
+export const mergeClientSchema = z
+  .object({
+    sourceClientId: z.string().min(1),
+    targetClientId: z.string().min(1, "Pick the client to merge into"),
+  })
+  .refine((v) => v.sourceClientId !== v.targetClientId, {
+    message: "Pick a different client to merge into",
+    path: ["targetClientId"],
+  });
+export type MergeClientInput = z.infer<typeof mergeClientSchema>;
+
 export const createPackageSchema = z.object({
   clientId: z.string(),
   templateId: z.string().optional().nullable(),
