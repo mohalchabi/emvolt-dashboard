@@ -33,12 +33,15 @@ export function WalletEntryActions({
   entryId,
   label,
   attachments,
+  canDelete = true,
 }: {
   kind: WalletEntryKind;
   entryId: string;
   /** What the entry is, for the confirmation copy — e.g. "Salary — Emad". */
   label: string;
   attachments: EntryAttachment[];
+  /** False hides the delete control for a role the action would reject anyway. */
+  canDelete?: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1">
@@ -56,7 +59,7 @@ export function WalletEntryActions({
         </a>
       ))}
       <DocumentsDialog kind={kind} entryId={entryId} attachments={attachments} />
-      <DeleteEntryButton kind={kind} entryId={entryId} label={label} />
+      {canDelete && <DeleteEntryButton kind={kind} entryId={entryId} label={label} />}
     </div>
   );
 }

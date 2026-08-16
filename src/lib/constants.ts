@@ -1,5 +1,22 @@
-export const STAFF_ROLES = ["admin", "trainer", "front_desk"] as const;
+export const STAFF_ROLES = ["admin", "trainer_manager", "trainer", "front_desk"] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
+
+/**
+ * Roles with studio-wide oversight: the whole client and lead list, the
+ * package catalog, and petty cash.
+ *
+ * Deliberately not the same as "admin". The trainers manager runs the floor
+ * but does not administer the business, so the wallet ledger (salaries, rent,
+ * transfers) and staff administration stay admin-only. Guard sites list this
+ * constant when the question is "does this person run the floor", and spell
+ * out ["admin"] when the answer really is only the owner.
+ */
+export const MANAGER_ROLES = ["admin", "trainer_manager"] as const satisfies readonly StaffRole[];
+
+/** Inline form of MANAGER_ROLES, for the `canManage`-style checks in pages. */
+export function isManagerRole(role: string): boolean {
+  return (MANAGER_ROLES as readonly string[]).includes(role);
+}
 
 export const SECTIONS = ["male", "female"] as const;
 export type Section = (typeof SECTIONS)[number];
@@ -114,6 +131,7 @@ export type WalletPaymentMethod = (typeof WALLET_PAYMENT_METHODS)[number];
 
 export const LABELS: Record<string, string> = {
   admin: "Admin",
+  trainer_manager: "Trainers Manager",
   trainer: "Trainer",
   front_desk: "Front Desk",
   male: "Male",
@@ -182,6 +200,7 @@ export const LABELS: Record<string, string> = {
 
 export const LABELS_AR: Record<string, string> = {
   admin: "مسؤول",
+  trainer_manager: "مدير المدربين",
   trainer: "مدرب",
   front_desk: "استقبال",
   male: "رجال",

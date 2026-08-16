@@ -25,6 +25,7 @@ export const en = {
     staff: "Staff",
     packageTypes: "Package Types",
     wallet: "Wallet",
+    pettyCash: "Petty Cash",
     myPettyCash: "My Petty Cash",
     help: "How to use",
   },

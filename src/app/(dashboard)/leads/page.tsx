@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/auth-helpers";
-import { label, LEAD_STATUSES } from "@/lib/constants";
+import { label, LEAD_STATUSES, MANAGER_ROLES } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
 import { guessGender } from "@/lib/gender-guess";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +32,7 @@ export default async function LeadsPage({
 }: {
   searchParams: Promise<{ status?: string; section?: string; assigned?: string; gender?: string; page?: string }>;
 }) {
-  await requireRole(["admin"]);
+  await requireRole([...MANAGER_ROLES]);
   const params = await searchParams;
   const { locale, t } = await getDictionary();
 

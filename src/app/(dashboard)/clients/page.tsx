@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/auth-helpers";
 import { packageBalances } from "@/lib/package-balance";
-import { label, CLIENT_STATUSES } from "@/lib/constants";
+import { label, CLIENT_STATUSES, MANAGER_ROLES } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
 import { HelpTip } from "@/components/help/help-tip";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +29,7 @@ export default async function ClientsPage({
 }: {
   searchParams: Promise<{ status?: string; section?: string; trainer?: string }>;
 }) {
-  await requireRole(["admin", "front_desk"]);
+  await requireRole([...MANAGER_ROLES, "front_desk"]);
   const params = await searchParams;
   const { t } = await getDictionary();
 

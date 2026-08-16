@@ -27,6 +27,7 @@ export const ar: Dictionary = {
     staff: "الموظفون",
     packageTypes: "أنواع الباقات",
     wallet: "المحفظة",
+    pettyCash: "العهدة النقدية",
     myPettyCash: "عهدتي النقدية",
     help: "كيف أستخدم اللوحة",
   },

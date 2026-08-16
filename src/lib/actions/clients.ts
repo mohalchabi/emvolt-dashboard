@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireSession, requireRole } from "@/lib/auth-helpers";
 import { createClientSession } from "@/lib/client-auth";
-import { label } from "@/lib/constants";
+import { label, isManagerRole } from "@/lib/constants";
 import { addNoteSchema } from "@/lib/schemas/lead";
 import { packageBalances } from "@/lib/package-balance";
 import { isSlotAvailable, overlaps, DEFAULT_SESSION_DURATION } from "@/lib/portal-availability";
@@ -342,7 +342,7 @@ export async function bookClientSession(input: BookClientSessionInput) {
   const client = await prisma.client.findUnique({ where: { id: data.clientId } });
   if (!client) throw new Error("Could not find that client.");
 
-  const canManage = session.user.role === "admin" || session.user.role === "front_desk";
+  const canManage = isManagerRole(session.user.role) || session.user.role === "front_desk";
   const isOwnTrainer = session.user.role === "trainer" && client.assignedTrainerId === session.user.id;
   if (!canManage && !isOwnTrainer) throw new Error("You don't have access to book for this client.");
 
@@ -401,7 +401,7 @@ export async function sendStaffMessage(input: { clientId: string; text: string }
   if (!client) throw new Error("Could not find that client.");
 
   const canMessage =
-    session.user.role === "admin" ||
+    isManagerRole(session.user.role) ||
     (session.user.role === "trainer" && client.assignedTrainerId === session.user.id);
   if (!canMessage) throw new Error("You don't have access to message this client.");
 
