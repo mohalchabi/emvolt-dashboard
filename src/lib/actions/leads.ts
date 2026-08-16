@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { requireSession, requireRole } from "@/lib/auth-helpers";
-import { label } from "@/lib/constants";
+import { label, MANAGER_ROLES } from "@/lib/constants";
 import {
   createLeadSchema,
   updateLeadStatusSchema,
@@ -25,7 +25,7 @@ import { isWhatsappConfigured, sendWhatsappMessage } from "@/lib/notify/whatsapp
 // the security boundary.
 async function requireLeadAccess(leadId: string) {
   const session = await requireSession();
-  if (session.user.role === "admin") return session;
+  if ((MANAGER_ROLES as readonly string[]).includes(session.user.role)) return session;
 
   const lead = await prisma.lead.findUnique({ where: { id: leadId }, select: { assignedStaffId: true } });
   if (!lead || lead.assignedStaffId !== session.user.id) {
@@ -35,7 +35,7 @@ async function requireLeadAccess(leadId: string) {
 }
 
 export async function createLead(input: CreateLeadInput) {
-  const session = await requireRole(["admin"]);
+  const session = await requireRole([...MANAGER_ROLES]);
   const data = createLeadSchema.parse(input);
 
   const lead = await prisma.lead.create({
@@ -94,7 +94,7 @@ export async function updateLeadStatus(input: {
 }
 
 export async function assignLead(input: { leadId: string; assignedStaffId: string | null }) {
-  const session = await requireRole(["admin"]);
+  const session = await requireRole([...MANAGER_ROLES]);
   const data = assignLeadSchema.parse(input);
 
   const staff = data.assignedStaffId
@@ -127,7 +127,7 @@ export async function assignLead(input: { leadId: string; assignedStaffId: strin
 }
 
 export async function bulkAssignLeads(input: { leadIds: string[]; staffId: string }) {
-  const session = await requireRole(["admin"]);
+  const session = await requireRole([...MANAGER_ROLES]);
   if (input.leadIds.length === 0) throw new Error("No leads selected.");
 
   const staff = await prisma.staff.findUniqueOrThrow({ where: { id: input.staffId } });
@@ -165,7 +165,7 @@ export async function bulkAssignLeads(input: { leadIds: string[]; staffId: strin
 // src/lib/notify/whatsapp.ts for the dev-log fallback used until a WhatsApp
 // Sender is registered.
 export async function sendLeadCampaign(input: SendLeadCampaignInput) {
-  const session = await requireRole(["admin"]);
+  const session = await requireRole([...MANAGER_ROLES]);
   const { leadIds, message } = sendLeadCampaignSchema.parse(input);
 
   const leads = await prisma.lead.findMany({

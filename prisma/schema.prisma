@@ -40,6 +40,7 @@ model Staff {
   walletPaymentsReceived     WalletTransaction[] @relation("WalletTransactionPayee")
   pettyCashExpensesRecorded  PettyCashExpense[]  @relation("PettyCashExpenseRecordedBy")
   pettyCashExpensesSpent     PettyCashExpense[]  @relation("PettyCashExpenseSpentBy")
+  clockEvents                ClockEvent[]        @relation("ClockEventStaff")
   walletAttachments          WalletAttachment[]  @relation("WalletAttachmentUploadedBy")
 }
 
@@ -425,4 +426,36 @@ model WalletAttachment {
   @@index([depositId])
   @@index([transactionId])
   @@index([pettyCashExpenseId])
+}
+
+// One tap of "clock in" or "clock out", with where the person was standing.
+//
+// Location is mandatory rather than best-effort: the action refuses to write a
+// row without coordinates, so every event here has a position and the columns
+// are non-null by construction. It is recorded, not fenced — the gym is a
+// concrete box and indoor GPS drifts by tens of metres, so refusing a clock-in
+// on distance would strand honest staff at the door. Whoever reviews the day
+// sees the coordinates and accuracy and judges for themselves.
+model ClockEvent {
+  id      String   @id @default(cuid())
+  staffId String
+  staff   Staff    @relation("ClockEventStaff", fields: [staffId], references: [id])
+  kind    String // in | out
+  at      DateTime @default(now())
+
+  latitude  Float
+  longitude Float
+  // Metres of uncertainty the browser reported. Worth keeping: a fix accurate
+  // to 2km says something very different from one accurate to 15m.
+  accuracy Float?
+
+  // Only ever set on a clock-out, and only when the person is leaving before
+  // the end of their day. Null means an ordinary end of shift.
+  departureReason String? // annual_leave | early_leave | field_task | sick
+  note            String?
+
+  createdAt DateTime @default(now())
+
+  @@index([staffId, at])
+  @@index([at])
 }

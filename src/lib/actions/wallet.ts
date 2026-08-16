@@ -5,7 +5,7 @@ import { put, del } from "@vercel/blob";
 import type { ZodType } from "zod";
 import { prisma } from "@/lib/db";
 import { requireRole, requireSession } from "@/lib/auth-helpers";
-import { PETTY_CASH_CATEGORY } from "@/lib/constants";
+import { PETTY_CASH_CATEGORY, MANAGER_ROLES } from "@/lib/constants";
 import {
   walletDepositSchema,
   walletTransactionSchema,
@@ -213,7 +213,7 @@ export async function recordWalletTransaction(formData: FormData) {
 }
 
 export async function recordPettyCashExpense(formData: FormData) {
-  const session = await requireRole(["admin"]);
+  const session = await requireRole([...MANAGER_ROLES]);
   const issue = await loadPettyCashFloat(text(formData, "issueId"));
 
   // The admin is transcribing someone else's receipt, so the purchase belongs
@@ -351,7 +351,7 @@ export async function deleteWalletTransaction(input: { transactionId: string }) 
 }
 
 export async function deletePettyCashExpense(input: { expenseId: string }) {
-  await requireRole(["admin"]);
+  await requireRole([...MANAGER_ROLES]);
 
   const expense = await prisma.pettyCashExpense.findUnique({
     where: { id: input.expenseId },

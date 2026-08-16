@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth-helpers";
-import { SESSION_STATUSES, type SessionStatus } from "@/lib/constants";
+import { SESSION_STATUSES, type SessionStatus, isManagerRole } from "@/lib/constants";
 
 /**
  * Close out a session after it happens — attended, didn't show, cancelled.
@@ -25,9 +25,9 @@ export async function updateSessionStatus(input: { sessionId: string; status: st
   });
   if (!session) throw new Error("That session no longer exists.");
 
-  // Admin and front desk cover the whole studio; a trainer may only close out
-  // sessions on their own schedule.
-  const isStaffWide = auth.user.role === "admin" || auth.user.role === "front_desk";
+  // Managers and front desk cover the whole studio; a trainer may only close
+  // out sessions on their own schedule.
+  const isStaffWide = isManagerRole(auth.user.role) || auth.user.role === "front_desk";
   if (!isStaffWide && session.trainerId !== auth.user.id) {
     throw new Error("You can only update your own sessions.");
   }

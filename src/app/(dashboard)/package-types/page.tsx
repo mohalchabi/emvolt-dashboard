@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/auth-helpers";
+import { MANAGER_ROLES } from "@/lib/constants";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -16,7 +17,7 @@ import {
 } from "@/components/package-types/package-template-row-actions";
 
 export default async function PackageTypesPage() {
-  await requireRole(["admin"]);
+  await requireRole([...MANAGER_ROLES]);
 
   const templates = await prisma.packageTemplate.findMany({
     orderBy: [{ active: "desc" }, { name: "asc" }, { sessions: "asc" }],

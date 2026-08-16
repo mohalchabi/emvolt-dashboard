@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/auth-helpers";
+import { MANAGER_ROLES } from "@/lib/constants";
 import { guessGender } from "@/lib/gender-guess";
 
 function csvField(value: string) {
@@ -12,7 +13,7 @@ function csvField(value: string) {
 // only phone and name apply to leads) and its bare-digits phone format
 // (966500000000, no leading +).
 export async function GET(req: NextRequest) {
-  await requireRole(["admin"]);
+  await requireRole([...MANAGER_ROLES]);
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status") || undefined;

@@ -1,7 +1,7 @@
 import { Coins, Receipt, TriangleAlert, Banknote } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/auth-helpers";
-import { PETTY_CASH_CATEGORY, label } from "@/lib/constants";
+import { PETTY_CASH_CATEGORY, label, MANAGER_ROLES } from "@/lib/constants";
 import {
   formatSar,
   formatDate,
@@ -36,7 +36,9 @@ export default async function PettyCashPage({
 }: {
   searchParams: Promise<{ month?: string }>;
 }) {
-  await requireRole(["admin"]);
+  const session = await requireRole([...MANAGER_ROLES]);
+  // Floats themselves belong to the ledger, so only the owner may remove one.
+  const isAdmin = session.user.role === "admin";
 
   const { month } = await searchParams;
   const range = isMonthKey(month) ? monthRange(month) : null;
@@ -119,7 +121,7 @@ export default async function PettyCashPage({
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <WalletTabs />
+        <WalletTabs showLedger={isAdmin} />
         <WalletPeriodSelect current={period} months={monthOptions(firstFloat?.paidAt ?? null)} />
       </div>
 
@@ -224,6 +226,7 @@ export default async function PettyCashPage({
                       entryId={float.id}
                       label={`Petty cash — ${holder}`}
                       attachments={float.attachments}
+                      canDelete={isAdmin}
                     />
                   </div>
                 </div>

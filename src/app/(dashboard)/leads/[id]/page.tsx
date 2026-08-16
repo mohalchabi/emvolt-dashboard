@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth-helpers";
-import { label } from "@/lib/constants";
+import { label, isManagerRole } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { LeadDetailPanel } from "@/components/leads/lead-detail-panel";
@@ -20,7 +20,7 @@ export default async function LeadDetailPage({
   const lead = await prisma.lead.findUnique({ where: { id }, include: { convertedClient: true } });
   if (!lead) notFound();
 
-  const canManage = session.user.role === "admin";
+  const canManage = isManagerRole(session.user.role);
   const isOwnLead = lead.assignedStaffId === session.user.id;
   if (!canManage && !isOwnLead) redirect("/");
 

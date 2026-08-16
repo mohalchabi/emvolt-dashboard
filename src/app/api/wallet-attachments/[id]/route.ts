@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { get } from "@vercel/blob";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
+import { PETTY_CASH_CATEGORY, isManagerRole } from "@/lib/constants";
 
 const notFound = () => new NextResponse("Not found", { status: 404 });
 
@@ -25,14 +26,27 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const attachment = await prisma.walletAttachment.findUnique({
     where: { id },
     include: {
-      pettyCashExpense: { select: { issue: { select: { payeeStaffId: true } } } },
+      pettyCashExpense: { select: { issue: { select: { payeeStaffId: true, category: true } } } },
+      transaction: { select: { category: true } },
     },
   });
   if (!attachment) return notFound();
 
+  // Petty cash paperwork: the invoices filed against a float, and the float's
+  // own handover document. This is the whole of what the trainers manager may
+  // open — salaries, rent and transfers stay with the owner.
+  const isPettyCashPaperwork =
+    attachment.pettyCashExpense?.issue.category === PETTY_CASH_CATEGORY ||
+    attachment.transaction?.category === PETTY_CASH_CATEGORY;
+
   const holdsTheFloat =
     attachment.pettyCashExpense?.issue.payeeStaffId === session.user.id;
-  if (session.user.role !== "admin" && !holdsTheFloat) return notFound();
+
+  const allowed =
+    session.user.role === "admin" ||
+    (isManagerRole(session.user.role) && isPettyCashPaperwork) ||
+    holdsTheFloat;
+  if (!allowed) return notFound();
 
   const blob = await get(attachment.fileUrl, {
     access: "private",

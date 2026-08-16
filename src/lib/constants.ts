@@ -1,5 +1,27 @@
-export const STAFF_ROLES = ["admin", "trainer", "front_desk"] as const;
+export const STAFF_ROLES = ["admin", "trainer_manager", "trainer", "front_desk"] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
+
+/**
+ * Roles with studio-wide oversight: the whole client and lead list, the
+ * package catalog, and petty cash.
+ *
+ * Deliberately not the same as "admin". The trainers manager runs the floor
+ * but does not administer the business, so the wallet ledger (salaries, rent,
+ * transfers) and staff administration stay admin-only. Guard sites list this
+ * constant when the question is "does this person run the floor", and spell
+ * out ["admin"] when the answer really is only the owner.
+ */
+export const MANAGER_ROLES = ["admin", "trainer_manager"] as const satisfies readonly StaffRole[];
+
+/** Inline form of MANAGER_ROLES, for the `canManage`-style checks in pages. */
+export function isManagerRole(role: string): boolean {
+  return (MANAGER_ROLES as readonly string[]).includes(role);
+}
+
+// Why someone clocked out before the end of their day. Null on an ordinary
+// end of shift — these are the exceptions, not a category for every clock-out.
+export const DEPARTURE_REASONS = ["annual_leave", "early_leave", "field_task", "sick"] as const;
+export type DepartureReason = (typeof DEPARTURE_REASONS)[number];
 
 export const SECTIONS = ["male", "female"] as const;
 export type Section = (typeof SECTIONS)[number];
@@ -114,10 +136,15 @@ export type WalletPaymentMethod = (typeof WALLET_PAYMENT_METHODS)[number];
 
 export const LABELS: Record<string, string> = {
   admin: "Admin",
+  trainer_manager: "Trainers Manager",
   trainer: "Trainer",
   front_desk: "Front Desk",
   male: "Male",
   female: "Female",
+  annual_leave: "Annual leave",
+  early_leave: "Early leave",
+  field_task: "Field task",
+  sick: "Sick",
   cal_com: "cal.com",
   instagram: "Instagram",
   walk_in: "Walk-in",
@@ -182,10 +209,15 @@ export const LABELS: Record<string, string> = {
 
 export const LABELS_AR: Record<string, string> = {
   admin: "مسؤول",
+  trainer_manager: "مدير المدربين",
   trainer: "مدرب",
   front_desk: "استقبال",
   male: "رجال",
   female: "سيدات",
+  annual_leave: "إجازة",
+  early_leave: "مغادرة مبكرة",
+  field_task: "مهمة خارجية",
+  sick: "مرضي",
   cal_com: "cal.com",
   instagram: "انستغرام",
   walk_in: "زيارة مباشرة",

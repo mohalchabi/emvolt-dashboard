@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth-helpers";
 import { getDictionary } from "@/lib/i18n";
-import { label } from "@/lib/constants";
+import { label, isManagerRole } from "@/lib/constants";
 import { packageBalances } from "@/lib/package-balance";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +32,7 @@ export default async function ClientDetailPage({
   });
   if (!client) notFound();
 
-  const canManage = session.user.role === "admin" || session.user.role === "front_desk";
+  const canManage = isManagerRole(session.user.role) || session.user.role === "front_desk";
   const isOwnTrainer = session.user.role === "trainer" && client.assignedTrainerId === session.user.id;
   if (!canManage && !isOwnTrainer) redirect("/");
 

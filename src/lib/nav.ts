@@ -10,7 +10,9 @@ export type NavKey =
   | "calendar"
   | "staff"
   | "packageTypes"
+  | "attendance"
   | "wallet"
+  | "pettyCash"
   | "myPettyCash"
   | "help";
 
@@ -21,22 +23,28 @@ export type NavItem = {
 };
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", labelKey: "dashboard", roles: ["admin", "trainer", "front_desk"] },
+  { href: "/", labelKey: "dashboard", roles: ["admin", "trainer_manager", "trainer", "front_desk"] },
   // Full lead list + weekly distribution is admin-only; everyone else works
   // their own assigned leads via "My Leads".
-  { href: "/leads", labelKey: "leads", roles: ["admin"] },
+  { href: "/leads", labelKey: "leads", roles: ["admin", "trainer_manager"] },
   { href: "/my-leads", labelKey: "myLeads", roles: ["front_desk", "trainer"] },
-  { href: "/clients", labelKey: "clients", roles: ["admin", "front_desk"] },
+  { href: "/clients", labelKey: "clients", roles: ["admin", "trainer_manager", "front_desk"] },
   { href: "/my-clients", labelKey: "myClients", roles: ["trainer"] },
-  { href: "/calendar", labelKey: "calendar", roles: ["admin", "front_desk", "trainer"] },
+  { href: "/calendar", labelKey: "calendar", roles: ["admin", "trainer_manager", "front_desk", "trainer"] },
+  // Everyone clocks themselves in and out, so this is the one nav item with
+  // no role condition at all.
+  { href: "/attendance", labelKey: "attendance", roles: ["admin", "trainer_manager", "trainer", "front_desk"] },
   { href: "/staff", labelKey: "staff", roles: ["admin"] },
-  { href: "/package-types", labelKey: "packageTypes", roles: ["admin"] },
-  // Cash ledger — salaries, petty cash and the transfers funding them are
-  // admin-only, so this never appears for trainers or front desk.
+  { href: "/package-types", labelKey: "packageTypes", roles: ["admin", "trainer_manager"] },
+  // Cash ledger — salaries, rent and the transfers funding them stay with the
+  // owner, so this never appears for anyone else.
   { href: "/wallet", labelKey: "wallet", roles: ["admin"] },
+  // The trainers manager runs the floor's cash but not the ledger, so petty
+  // cash is linked on its own rather than through the wallet.
+  { href: "/wallet/petty-cash", labelKey: "pettyCash", roles: ["trainer_manager"] },
   // Training videos. Sits last so it's out of the daily path but always
   // reachable — new staff are pointed here on their first shift.
-  { href: "/help", labelKey: "help", roles: ["admin", "trainer", "front_desk"] },
+  { href: "/help", labelKey: "help", roles: ["admin", "trainer_manager", "trainer", "front_desk"] },
 ];
 
 /**
