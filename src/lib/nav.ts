@@ -10,6 +10,7 @@ export type NavKey =
   | "calendar"
   | "staff"
   | "packageTypes"
+  | "attendance"
   | "wallet"
   | "pettyCash"
   | "myPettyCash"
@@ -30,6 +31,9 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/clients", labelKey: "clients", roles: ["admin", "trainer_manager", "front_desk"] },
   { href: "/my-clients", labelKey: "myClients", roles: ["trainer"] },
   { href: "/calendar", labelKey: "calendar", roles: ["admin", "trainer_manager", "front_desk", "trainer"] },
+  // Everyone clocks themselves in and out, so this is the one nav item with
+  // no role condition at all.
+  { href: "/attendance", labelKey: "attendance", roles: ["admin", "trainer_manager", "trainer", "front_desk"] },
   { href: "/staff", labelKey: "staff", roles: ["admin"] },
   { href: "/package-types", labelKey: "packageTypes", roles: ["admin", "trainer_manager"] },
   // Cash ledger — salaries, rent and the transfers funding them stay with the

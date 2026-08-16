@@ -18,6 +18,11 @@ export function isManagerRole(role: string): boolean {
   return (MANAGER_ROLES as readonly string[]).includes(role);
 }
 
+// Why someone clocked out before the end of their day. Null on an ordinary
+// end of shift — these are the exceptions, not a category for every clock-out.
+export const DEPARTURE_REASONS = ["annual_leave", "early_leave", "field_task", "sick"] as const;
+export type DepartureReason = (typeof DEPARTURE_REASONS)[number];
+
 export const SECTIONS = ["male", "female"] as const;
 export type Section = (typeof SECTIONS)[number];
 
@@ -136,6 +141,10 @@ export const LABELS: Record<string, string> = {
   front_desk: "Front Desk",
   male: "Male",
   female: "Female",
+  annual_leave: "Annual leave",
+  early_leave: "Early leave",
+  field_task: "Field task",
+  sick: "Sick",
   cal_com: "cal.com",
   instagram: "Instagram",
   walk_in: "Walk-in",
@@ -205,6 +214,10 @@ export const LABELS_AR: Record<string, string> = {
   front_desk: "استقبال",
   male: "رجال",
   female: "سيدات",
+  annual_leave: "إجازة",
+  early_leave: "مغادرة مبكرة",
+  field_task: "مهمة خارجية",
+  sick: "مرضي",
   cal_com: "cal.com",
   instagram: "انستغرام",
   walk_in: "زيارة مباشرة",
