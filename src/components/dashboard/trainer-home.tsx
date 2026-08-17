@@ -15,11 +15,14 @@ export async function TrainerHome({
   trainerName,
   t,
   locale,
+  headless = false,
 }: {
   trainerId: string;
   trainerName: string;
   t: Dictionary;
   locale: Locale;
+  /** The overview above already carries the greeting and these counts. */
+  headless?: boolean;
 }) {
   const now = new Date();
   const todayStart = startOfDay(now);
@@ -46,18 +49,22 @@ export async function TrainerHome({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          {t.trainerHome.welcome} {trainerName}
-        </h1>
-        <p className="text-sm text-muted-foreground">{t.trainerHome.subtitle}</p>
-      </div>
+      {!headless && (
+        <>
+          <div>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight">
+              {t.trainerHome.welcome} {trainerName}
+            </h1>
+            <p className="text-sm text-muted-foreground">{t.trainerHome.subtitle}</p>
+          </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <StatTile label={t.trainerHome.sessionsToday} value={todaySessions.length} icon={CalendarClock} tone="primary" />
-        <StatTile label={t.trainerHome.sessionsThisWeek} value={weekSessionCount} icon={Clock3} tone="primary" />
-        <StatTile label={t.trainerHome.activeClients} value={clientCount} icon={Users2} tone="primary" />
-      </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <StatTile label={t.trainerHome.sessionsToday} value={todaySessions.length} icon={CalendarClock} tone="primary" />
+            <StatTile label={t.trainerHome.sessionsThisWeek} value={weekSessionCount} icon={Clock3} tone="primary" />
+            <StatTile label={t.trainerHome.activeClients} value={clientCount} icon={Users2} tone="primary" />
+          </div>
+        </>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>

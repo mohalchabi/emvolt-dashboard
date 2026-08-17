@@ -20,10 +20,13 @@ export async function FrontDeskHome({
   staffId,
   staffName,
   t,
+  headless = false,
 }: {
   staffId: string;
   staffName: string;
   t: Dictionary;
+  /** The overview above already carries the greeting and these counts. */
+  headless?: boolean;
 }) {
   const [myOpenLeads, activeClientsBySection, weekSessions, upcomingTrials, renewalAlerts] =
     await Promise.all([
@@ -40,32 +43,37 @@ export async function FrontDeskHome({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          {t.frontDeskHome.welcome} {staffName}
-        </h1>
-        <p className="text-sm text-muted-foreground">{t.frontDeskHome.subtitle}</p>
-      </div>
+      {!headless && (
+        <>
+          <div>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight">
+              {t.frontDeskHome.welcome} {staffName}
+            </h1>
+            <p className="text-sm text-muted-foreground">{t.frontDeskHome.subtitle}</p>
+          </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Link href="/my-leads" className="block">
-          <StatTile label={t.frontDeskHome.myOpenLeads} value={myOpenLeads} icon={ClipboardList} tone="primary" />
-        </Link>
-        <StatTile label={t.frontDeskHome.activeClients} value={activeClients} icon={Users} tone="primary" />
-        <StatTile
-          label={t.frontDeskHome.trialsToday}
-          value={upcomingTrials.todayCount}
-          sublabel={`${upcomingTrials.weekCount} ${t.common.thisWeek}`}
-          icon={CalendarClock}
-          tone="primary"
-        />
-        <StatTile
-          label={t.frontDeskHome.completedThisWeek}
-          value={weekSessions.completed}
-          icon={CheckCircle2}
-          tone="good"
-        />
-      </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Link href="/my-leads" className="block">
+              <StatTile label={t.frontDeskHome.myOpenLeads} value={myOpenLeads} icon={ClipboardList} tone="primary" />
+            </Link>
+            <StatTile label={t.frontDeskHome.activeClients} value={activeClients} icon={Users} tone="primary" />
+            <StatTile
+              label={t.frontDeskHome.trialsToday}
+              value={upcomingTrials.todayCount}
+              sublabel={`${upcomingTrials.weekCount} ${t.common.thisWeek}`}
+              icon={CalendarClock}
+              tone="primary"
+            />
+            <StatTile
+              label={t.frontDeskHome.completedThisWeek}
+              value={weekSessions.completed}
+              icon={CheckCircle2}
+              tone="good"
+            />
+          </div>
+
+        </>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <UpcomingTrialsCard data={upcomingTrials} t={t.upcomingTrials} common={t.common} />

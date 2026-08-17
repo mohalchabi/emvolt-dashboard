@@ -25,16 +25,51 @@ import { StaleLeadsCard } from "@/components/dashboard/stale-leads-list";
 import { RecentActivityCard } from "@/components/dashboard/recent-activity";
 import { TrainerHome } from "@/components/dashboard/trainer-home";
 import { FrontDeskHome } from "@/components/dashboard/front-desk-home";
+import { StaffOverview } from "@/components/dashboard/staff-overview";
 
 export default async function DashboardHome() {
   const session = await requireSession();
   const { locale, t } = await getDictionary();
 
+  // Everyone opens onto the same shape: clock in or out, then the boxes for
+  // wherever they actually work. What sits under it differs by role.
+  const overview = (
+    <StaffOverview staffId={session.user.id} role={session.user.role} t={t} locale={locale} />
+  );
+
   if (session.user.role === "trainer") {
-    return <TrainerHome trainerId={session.user.id} trainerName={session.user.name} t={t} locale={locale} />;
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">
+            {t.trainerHome.welcome} {session.user.name}
+          </h1>
+          <p className="text-sm text-muted-foreground">{t.trainerHome.subtitle}</p>
+        </div>
+        {overview}
+        <TrainerHome
+          trainerId={session.user.id}
+          trainerName={session.user.name}
+          t={t}
+          locale={locale}
+          headless
+        />
+      </div>
+    );
   }
   if (session.user.role === "front_desk") {
-    return <FrontDeskHome staffId={session.user.id} staffName={session.user.name} t={t} />;
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">
+            {t.frontDeskHome.welcome} {session.user.name}
+          </h1>
+          <p className="text-sm text-muted-foreground">{t.frontDeskHome.subtitle}</p>
+        </div>
+        {overview}
+        <FrontDeskHome staffId={session.user.id} staffName={session.user.name} t={t} headless />
+      </div>
+    );
   }
 
   const [
@@ -71,6 +106,8 @@ export default async function DashboardHome() {
         <h1 className="font-heading text-2xl font-semibold tracking-tight">{t.dashboardAdmin.title}</h1>
         <p className="text-sm text-muted-foreground">{t.dashboardAdmin.subtitle}</p>
       </div>
+
+      {overview}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatTile
