@@ -10,6 +10,7 @@ export type NavKey =
   | "calendar"
   | "staff"
   | "packageTypes"
+  | "reports"
   | "attendance"
   | "wallet"
   | "pettyCash"
@@ -34,6 +35,9 @@ export const NAV_ITEMS: NavItem[] = [
   // Everyone clocks themselves in and out, so this is the one nav item with
   // no role condition at all.
   { href: "/attendance", labelKey: "attendance", roles: ["admin", "trainer_manager", "trainer", "front_desk"] },
+  // Revenue and signups. Admin-only for now: it is the money the studio takes,
+  // which is a different question from the floor cash the manager reconciles.
+  { href: "/reports", labelKey: "reports", roles: ["admin"] },
   { href: "/staff", labelKey: "staff", roles: ["admin"] },
   { href: "/package-types", labelKey: "packageTypes", roles: ["admin", "trainer_manager"] },
   // Cash ledger — salaries, rent and the transfers funding them stay with the

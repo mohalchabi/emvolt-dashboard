@@ -30,7 +30,20 @@ export function StatTile({
           <Icon className="size-5" />
         </div>
         <div className="min-w-0">
-          <div className="text-2xl font-semibold">{value}</div>
+          {/* An amount must never break across lines: "4,200.00 / SAR" reads as
+              two figures. Whether it wrapped used to depend on which digits it
+              contained, since "4" is wider than "1" — tabular-nums removes that,
+              and nowrap removes the rest. */}
+          <div
+            className={cn(
+              "font-semibold",
+              typeof value === "string" && value.length > 9
+                ? "text-lg tabular-nums whitespace-nowrap"
+                : "text-2xl"
+            )}
+          >
+            {value}
+          </div>
           <div className="truncate text-xs text-muted-foreground">{label}</div>
           {sublabel && <div className="truncate text-xs text-muted-foreground">{sublabel}</div>}
         </div>
