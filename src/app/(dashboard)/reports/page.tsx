@@ -1,4 +1,4 @@
-import { Users2, Banknote, Repeat, Receipt } from "lucide-react";
+import { Users2, Banknote, Repeat, Receipt, Target } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
 import { label } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
@@ -7,6 +7,8 @@ import { getReportTotals, isReportPeriod, type ReportPeriod } from "@/lib/report
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { ReportPeriodSelect } from "@/components/reports/period-select";
+import { TrendChart } from "@/components/reports/trend-chart";
+import { BarChartCard } from "@/components/dashboard/bar-chart-card";
 
 /**
  * How many customers came in and how much money came with them, over a period.
@@ -32,6 +34,8 @@ export default async function ReportsPage({
 
   const renewalShare = r.revenue > 0 ? Math.round((r.renewalRevenue / r.revenue) * 100) : 0;
   const peakDay = [...r.series].sort((a, b) => b.revenue - a.revenue)[0];
+  const conversion =
+    r.leadsCreated > 0 ? Math.round((r.leadsConverted / r.leadsCreated) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -61,6 +65,19 @@ export default async function ReportsPage({
           tone="primary"
         />
       </div>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile label={c.leadsCreated} value={r.leadsCreated} icon={Target} tone="neutral" />
+        <StatTile
+          label={c.leadsConverted}
+          value={r.leadsConverted}
+          sublabel={`${conversion}% ${c.conversionRate}`}
+          icon={Target}
+          tone={r.leadsConverted > 0 ? "good" : "neutral"}
+        />
+      </div>
+
+      <TrendChart data={r.series} t={c} currency={c.currency} />
 
       <Card>
         <CardHeader>
@@ -157,6 +174,12 @@ export default async function ReportsPage({
           </CardContent>
         </Card>
       </div>
+
+      <BarChartCard
+        title={c.leadsBySource}
+        data={r.leadsBySource.map((s) => ({ name: label(s.source, locale), value: s.count }))}
+        emptyMessage={c.nothingInPeriod}
+      />
     </div>
   );
 }

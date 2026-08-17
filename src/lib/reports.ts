@@ -25,6 +25,10 @@ export type ReportTotals = {
   series: { date: string; revenue: number; newClients: number }[];
   byPaymentMethod: { method: string; revenue: number; count: number }[];
   byPackage: { name: string; revenue: number; count: number }[];
+  /** Acquisition for the same window, so the funnel and the money line up. */
+  leadsCreated: number;
+  leadsConverted: number;
+  leadsBySource: { source: string; count: number }[];
 };
 
 /**
@@ -37,7 +41,8 @@ export type ReportTotals = {
 export async function getReportTotals(period: ReportPeriod): Promise<ReportTotals> {
   const { start, end } = periodRange(period);
 
-  const [newClients, packages, clientsInPeriod] = await Promise.all([
+  const [newClients, packages, clientsInPeriod, leadsCreated, leadsConverted, leadSources] =
+    await Promise.all([
     prisma.client.count({ where: { createdAt: within(start, end) } }),
     prisma.package.findMany({
       where: { purchaseDate: within(start, end) },
@@ -50,11 +55,20 @@ export async function getReportTotals(period: ReportPeriod): Promise<ReportTotal
       },
       orderBy: { purchaseDate: "asc" },
     }),
-    prisma.client.findMany({
-      where: { createdAt: within(start, end) },
-      select: { createdAt: true },
-    }),
-  ]);
+      prisma.client.findMany({
+        where: { createdAt: within(start, end) },
+        select: { createdAt: true },
+      }),
+      prisma.lead.count({ where: { createdAt: within(start, end) } }),
+      // Counted by when the lead arrived, not when it converted, so the
+      // conversion rate compares like with like against leadsCreated.
+      prisma.lead.count({ where: { createdAt: within(start, end), status: "converted" } }),
+      prisma.lead.groupBy({
+        by: ["source"],
+        where: { createdAt: within(start, end) },
+        _count: { _all: true },
+      }),
+    ]);
 
   const revenue = roundMoney(packages.reduce((s, p) => s + p.price, 0));
   const renewalRevenue = roundMoney(
@@ -116,5 +130,10 @@ export async function getReportTotals(period: ReportPeriod): Promise<ReportTotal
       .map(([name, v]) => ({ name, ...v }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10),
+    leadsCreated,
+    leadsConverted,
+    leadsBySource: leadSources
+      .map((row) => ({ source: row.source, count: row._count._all }))
+      .sort((a, b) => b.count - a.count),
   };
 }
