@@ -1,6 +1,6 @@
 import { Users2, Banknote, Repeat, Receipt, Target } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
-import { label } from "@/lib/constants";
+import { label, MANAGER_ROLES } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
 import { formatSar } from "@/lib/wallet";
 import { getReportTotals, isReportPeriod, type ReportPeriod } from "@/lib/reports";
@@ -24,7 +24,7 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<{ period?: string }>;
 }) {
-  await requireRole(["admin"]);
+  await requireRole([...MANAGER_ROLES]);
   const { locale, t } = await getDictionary();
   const c = t.reports;
 

@@ -69,7 +69,7 @@ export default async function ClientDetailPage({
   // to the top; the rest of the list is there for a duplicate typed in with a
   // mistyped number. Admin-only, and only loaded for them.
   const mergeCandidates =
-    session.user.role === "admin"
+    isManagerRole(session.user.role)
       ? (
           await prisma.client.findMany({
             where: { id: { not: client.id } },
@@ -100,7 +100,7 @@ export default async function ClientDetailPage({
           <h1 className="font-heading text-2xl font-semibold tracking-tight">{client.name}</h1>
           <Badge variant="outline">{label(client.section, locale)}</Badge>
           {session.user.role === "admin" && <PreviewAsClientButton clientId={client.id} />}
-          {session.user.role === "admin" && (
+          {isManagerRole(session.user.role) && (
             <MergeClientDialog
               clientId={client.id}
               clientName={client.name}
@@ -130,7 +130,7 @@ export default async function ClientDetailPage({
         </div>
 
         <div className="flex flex-col gap-6">
-          <PackagesPanel clientId={client.id} section={client.section} packages={client.packages} locale={locale} t={t.clientDetail} />
+          <PackagesPanel clientId={client.id} section={client.section} packages={client.packages} locale={locale} t={t.clientDetail} canDelete={session.user.role === "admin"} />
           <InbodyPanel clientId={client.id} results={inBodyResults} t={t.clientDetail} />
           <DocumentsPanel
             clientId={client.id}

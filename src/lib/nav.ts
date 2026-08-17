@@ -35,9 +35,9 @@ export const NAV_ITEMS: NavItem[] = [
   // Everyone clocks themselves in and out, so this is the one nav item with
   // no role condition at all.
   { href: "/attendance", labelKey: "attendance", roles: ["admin", "trainer_manager", "trainer", "front_desk"] },
-  // Revenue and signups. Admin-only for now: it is the money the studio takes,
-  // which is a different question from the floor cash the manager reconciles.
-  { href: "/reports", labelKey: "reports", roles: ["admin"] },
+  // Revenue and signups. The manager sees this too: sales performance is the
+  // number they are run against. The wallet ledger stays with the owner.
+  { href: "/reports", labelKey: "reports", roles: ["admin", "trainer_manager"] },
   { href: "/staff", labelKey: "staff", roles: ["admin"] },
   { href: "/package-types", labelKey: "packageTypes", roles: ["admin", "trainer_manager"] },
   // Cash ledger — salaries, rent and the transfers funding them stay with the

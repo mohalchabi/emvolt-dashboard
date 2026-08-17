@@ -1,4 +1,5 @@
 import { NewPackageDialog } from "@/components/clients/new-package-dialog";
+import { DeletePackageButton } from "@/components/clients/delete-package-button";
 import { packageBalances } from "@/lib/package-balance";
 import { label } from "@/lib/constants";
 import { prisma } from "@/lib/db";
@@ -13,20 +14,33 @@ export async function PackagesPanel({
   packages,
   locale,
   t,
+  canDelete = false,
 }: {
   clientId: string;
   section: string;
   packages: Package[];
   locale: Locale;
   t: Dictionary["clientDetail"];
+  /** Removing a package rewrites revenue reporting, so it stays with the owner. */
+  canDelete?: boolean;
 }) {
-  const [balances, templates] = await Promise.all([
+  const [balances, templates, sessionCounts] = await Promise.all([
     packageBalances(packages),
     prisma.packageTemplate.findMany({
       where: { active: true, OR: [{ section: null }, { section }] },
       orderBy: [{ name: "asc" }, { sessions: "asc" }],
     }),
+    // How many sessions each package carries, so the confirmation can say what
+    // survives the delete rather than leaving it to be discovered afterwards.
+    prisma.session.groupBy({
+      by: ["packageId"],
+      where: { packageId: { in: packages.map((p) => p.id) } },
+      _count: { _all: true },
+    }),
   ]);
+  const sessionsByPackage = new Map(
+    sessionCounts.map((row) => [row.packageId as string, row._count._all])
+  );
 
   return (
     <Card>
@@ -52,6 +66,14 @@ export async function PackagesPanel({
                 <span className="font-medium">{pkg.name}</span>
                 <div className="flex gap-1">
                   {pkg.isRenewal && <Badge variant="secondary">{t.renewalBadge}</Badge>}
+                  {canDelete && (
+                    <DeletePackageButton
+                      packageId={pkg.id}
+                      packageName={pkg.name}
+                      sessionCount={sessionsByPackage.get(pkg.id) ?? 0}
+                      t={t}
+                    />
+                  )}
                   {pkg.renewalRequestedAt && (
                     <Badge variant="outline" className="border-amber-500/60 text-amber-400">
                       {t.clientRequestedRenewal}
