@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireSession, requireRole } from "@/lib/auth-helpers";
 import { createClientSession } from "@/lib/client-auth";
-import { label, isManagerRole } from "@/lib/constants";
+import { label, isManagerRole, MANAGER_ROLES } from "@/lib/constants";
 import { addNoteSchema } from "@/lib/schemas/lead";
 import { packageBalances } from "@/lib/package-balance";
 import { isSlotAvailable, overlaps, DEFAULT_SESSION_DURATION } from "@/lib/portal-availability";
@@ -427,7 +427,9 @@ export async function sendStaffMessage(input: { clientId: string; text: string }
  * leave a member's history split across two records.
  */
 export async function mergeClientInto(input: MergeClientInput) {
-  const session = await requireRole(["admin"]);
+  // The manager is usually the first to spot a duplicate, and waiting for the
+  // owner leaves the member split in the customer portal in the meantime.
+  const session = await requireRole([...MANAGER_ROLES]);
   const { sourceClientId, targetClientId } = mergeClientSchema.parse(input);
 
   const [source, target] = await Promise.all([
@@ -495,4 +497,49 @@ export async function mergeClientInto(input: MergeClientInput) {
   revalidatePath("/my-clients");
   revalidatePath(`/clients/${targetClientId}`);
   return { targetClientId };
+}
+
+/**
+ * Removes a package that shouldn't be there — the wrong session count, the
+ * wrong client, a duplicate sale.
+ *
+ * Sessions booked against it are unlinked rather than deleted. A session that
+ * actually happened belongs in the trainer's history and on the calendar
+ * whatever went wrong with the paperwork; it simply stops counting against a
+ * package. Deleting them would quietly erase work that was really done.
+ *
+ * Admin only. This changes what the studio's revenue reports say, which is a
+ * different kind of correction from merging a duplicate client record.
+ */
+export async function deletePackage(input: { packageId: string }) {
+  const session = await requireRole(["admin"]);
+
+  const pkg = await prisma.package.findUnique({
+    where: { id: input.packageId },
+    include: { _count: { select: { sessions: true } } },
+  });
+  if (!pkg) return { unlinkedSessions: 0 };
+
+  const unlinkedSessions = pkg._count.sessions;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.session.updateMany({ where: { packageId: pkg.id }, data: { packageId: null } });
+    await tx.package.delete({ where: { id: pkg.id } });
+    await tx.activityLog.create({
+      data: {
+        clientId: pkg.clientId,
+        authorId: session.user.id,
+        text:
+          `Deleted package "${pkg.name}" (${pkg.totalSessions} sessions, ${pkg.price} SAR).` +
+          (unlinkedSessions > 0
+            ? ` ${unlinkedSessions} session(s) kept on the calendar, no longer counted against a package.`
+            : ""),
+      },
+    });
+  });
+
+  revalidatePath("/clients");
+  revalidatePath(`/clients/${pkg.clientId}`);
+  revalidatePath("/reports");
+  return { unlinkedSessions };
 }
