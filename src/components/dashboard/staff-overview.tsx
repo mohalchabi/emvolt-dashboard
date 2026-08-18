@@ -13,6 +13,7 @@ import { prisma } from "@/lib/db";
 import { PETTY_CASH_CATEGORY, isManagerRole, type StaffRole } from "@/lib/constants";
 import { formatSar, roundMoney } from "@/lib/wallet";
 import { currentClockState } from "@/lib/actions/attendance";
+import { formatGymTime } from "@/lib/time";
 import { ClockCard } from "@/components/attendance/clock-card";
 import { OverviewTile } from "@/components/dashboard/overview-tile";
 import type { Dictionary, Locale } from "@/lib/i18n";
@@ -41,6 +42,9 @@ export async function StaffOverview({
 }) {
   const c = t.overview;
   const now = new Date();
+  // Session times are stored as the wall clock staff typed, so this window has
+  // to stay in the same frame as they are rather than moving to gym time. Clock
+  // events are true instants and do use gym time, via the helpers in lib/time.
   const todayStart = startOfDay(now);
   const todayEnd = endOfDay(now);
 
@@ -87,12 +91,7 @@ export async function StaffOverview({
       <ClockCard
         isClockedIn={clock.isClockedIn}
         sinceLabel={
-          clock.isClockedIn && clock.last
-            ? clock.last.at.toLocaleTimeString(locale === "ar" ? "ar-SA" : "en-GB", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : null
+          clock.isClockedIn && clock.last ? formatGymTime(clock.last.at, locale) : null
         }
         t={t.attendance}
         locale={locale}

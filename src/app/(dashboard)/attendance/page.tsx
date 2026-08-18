@@ -4,30 +4,10 @@ import { requireSession } from "@/lib/auth-helpers";
 import { isManagerRole, label } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
 import { currentClockState } from "@/lib/actions/attendance";
+import { formatGymDate, formatGymTime, startOfGymDay } from "@/lib/time";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClockCard } from "@/components/attendance/clock-card";
-
-/** Start of the local day, so "today" means today at the gym, not in UTC. */
-function startOfToday() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function timeOf(date: Date, locale: string) {
-  return date.toLocaleTimeString(locale === "ar" ? "ar-SA" : "en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function dayOf(date: Date, locale: string) {
-  return date.toLocaleDateString(locale === "ar" ? "ar-SA" : "en-GB", {
-    day: "2-digit",
-    month: "short",
-  });
-}
 
 /** Opens the recorded position in whatever map app the device has. */
 function mapHref(lat: number, lng: number) {
@@ -49,7 +29,7 @@ export default async function AttendancePage() {
     }),
     isManager
       ? prisma.clockEvent.findMany({
-          where: { at: { gte: startOfToday() } },
+          where: { at: { gte: startOfGymDay() } },
           include: { staff: { select: { id: true, name: true, role: true } } },
           orderBy: { at: "desc" },
         })
@@ -65,7 +45,7 @@ export default async function AttendancePage() {
 
       <ClockCard
         isClockedIn={isClockedIn}
-        sinceLabel={isClockedIn && last ? timeOf(last.at, locale) : null}
+        sinceLabel={isClockedIn && last ? formatGymTime(last.at, locale) : null}
         t={c}
         locale={locale}
       />
@@ -88,7 +68,7 @@ export default async function AttendancePage() {
                     {e.kind === "in" ? c.in : c.out}
                   </Badge>
                   <span className="text-muted-foreground">
-                    <bdi>{dayOf(e.at, locale)}</bdi> · <bdi>{timeOf(e.at, locale)}</bdi>
+                    <bdi>{formatGymDate(e.at, locale)}</bdi> · <bdi>{formatGymTime(e.at, locale)}</bdi>
                   </span>
                   {e.departureReason && (
                     <Badge variant="outline" className="border-amber-500/60 text-amber-400">
@@ -143,7 +123,7 @@ export default async function AttendancePage() {
                       {e.kind === "in" ? c.in : c.out}
                     </Badge>
                     <span className="text-muted-foreground">
-                      <bdi>{timeOf(e.at, locale)}</bdi>
+                      <bdi>{formatGymTime(e.at, locale)}</bdi>
                     </span>
                     <a
                       href={mapHref(e.latitude, e.longitude)}
