@@ -1,5 +1,5 @@
-import { eachDayOfInterval, format, startOfDay } from "date-fns";
 import { prisma } from "@/lib/db";
+import { eachGymDay, gymDayKey } from "@/lib/time";
 import { roundMoney } from "@/lib/wallet";
 import { periodRange, type ReportPeriod } from "@/lib/report-periods";
 
@@ -78,23 +78,24 @@ export async function getReportTotals(period: ReportPeriod): Promise<ReportTotal
   // Day buckets only make sense over a bounded window; for "all" the series
   // would be mostly empty days, so it spans the data instead.
   const seriesStart = start ?? packages[0]?.purchaseDate ?? end;
-  const days =
-    seriesStart <= end ? eachDayOfInterval({ start: startOfDay(seriesStart), end: startOfDay(end) }) : [];
+  // Buckets follow the gym's day, so a sale at 1am Riyadh lands on the day the
+  // person who made it would call it, not on the previous UTC one.
+  const days = seriesStart <= end ? eachGymDay(seriesStart, end) : [];
   const cappedDays = days.length > 370 ? days.slice(days.length - 370) : days;
 
   const revenueByDay = new Map<string, number>();
   for (const p of packages) {
-    const key = format(p.purchaseDate, "yyyy-MM-dd");
+    const key = gymDayKey(p.purchaseDate);
     revenueByDay.set(key, roundMoney((revenueByDay.get(key) ?? 0) + p.price));
   }
   const clientsByDay = new Map<string, number>();
   for (const c of clientsInPeriod) {
-    const key = format(c.createdAt, "yyyy-MM-dd");
+    const key = gymDayKey(c.createdAt);
     clientsByDay.set(key, (clientsByDay.get(key) ?? 0) + 1);
   }
 
   const series = cappedDays.map((d) => {
-    const key = format(d, "yyyy-MM-dd");
+    const key = gymDayKey(d);
     return {
       date: key,
       revenue: revenueByDay.get(key) ?? 0,

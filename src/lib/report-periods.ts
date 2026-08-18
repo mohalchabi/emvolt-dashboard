@@ -2,17 +2,17 @@
 // component, and importing this from there must not drag Prisma into the
 // browser bundle.
 import {
-  startOfDay,
-  endOfDay,
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  startOfYear,
-  endOfYear,
-  subMonths,
-  subDays,
-} from "date-fns";
+  addGymDays,
+  addGymMonths,
+  endOfGymDay,
+  endOfGymMonth,
+  endOfGymWeek,
+  endOfGymYear,
+  startOfGymDay,
+  startOfGymMonth,
+  startOfGymWeek,
+  startOfGymYear,
+} from "@/lib/time";
 
 export const REPORT_PERIODS = [
   "today",
@@ -31,33 +31,38 @@ export function isReportPeriod(value: string | undefined): value is ReportPeriod
 }
 
 /**
- * Half-open [start, end) for a preset, in the server's local time so "today"
- * means today at the gym. `all` has no start, which the queries treat as
- * "everything up to now" rather than substituting an arbitrary epoch.
+ * Half-open [start, end) for a preset, on the gym's clock.
+ *
+ * These windows are matched against `Client.createdAt` and
+ * `Package.purchaseDate`, both true instants, so the boundaries have to be
+ * real instants too. Taking them from the server's own clock made "today" run
+ * 3am to 3am, since Vercel runs on UTC and the gym does not.
+ *
+ * `all` has no start, which the queries treat as "everything up to now" rather
+ * than substituting an arbitrary epoch.
  */
 export function periodRange(period: ReportPeriod): { start: Date | null; end: Date } {
   const now = new Date();
   switch (period) {
     case "today":
-      return { start: startOfDay(now), end: endOfDay(now) };
+      return { start: startOfGymDay(now), end: endOfGymDay(now) };
     case "yesterday": {
-      const y = subDays(now, 1);
-      return { start: startOfDay(y), end: endOfDay(y) };
+      const y = addGymDays(now, -1);
+      return { start: startOfGymDay(y), end: endOfGymDay(y) };
     }
     case "this_week":
-      return { start: startOfWeek(now, { weekStartsOn: 0 }), end: endOfWeek(now, { weekStartsOn: 0 }) };
+      return { start: startOfGymWeek(now), end: endOfGymWeek(now) };
     case "this_month":
-      return { start: startOfMonth(now), end: endOfMonth(now) };
+      return { start: startOfGymMonth(now), end: endOfGymMonth(now) };
     case "last_month": {
-      const m = subMonths(now, 1);
-      return { start: startOfMonth(m), end: endOfMonth(m) };
+      const m = addGymMonths(now, -1);
+      return { start: startOfGymMonth(m), end: endOfGymMonth(m) };
     }
     case "last_30":
-      return { start: startOfDay(subDays(now, 29)), end: endOfDay(now) };
+      return { start: startOfGymDay(addGymDays(now, -29)), end: endOfGymDay(now) };
     case "this_year":
-      return { start: startOfYear(now), end: endOfYear(now) };
+      return { start: startOfGymYear(now), end: endOfGymYear(now) };
     case "all":
       return { start: null, end: now };
   }
 }
-
