@@ -8,8 +8,16 @@
  */
 export const GYM_TIME_ZONE = "Asia/Riyadh";
 
+/**
+ * Arabic months and weekday names, but Latin digits on the Gregorian calendar.
+ *
+ * Bare `ar-SA` renders ١٤:٢٥, which would sit next to counts, prices and
+ * accuracy readings that are all Latin, sometimes on the same line. It can
+ * also resolve to the Hijri calendar depending on the ICU build, which the
+ * day picker's Gregorian value would then contradict.
+ */
 function intlLocale(locale: string) {
-  return locale === "ar" ? "ar-SA" : "en-GB";
+  return locale === "ar" ? "ar-u-ca-gregory-nu-latn" : "en-GB";
 }
 
 /**
@@ -128,6 +136,18 @@ export function addGymDays(at: Date, days: number): Date {
 export function addGymMonths(at: Date, months: number): Date {
   const fields = toGymFields(at);
   fields.setUTCMonth(fields.getUTCMonth() + months);
+  return fromGymFields(fields);
+}
+
+/**
+ * Gym midnight on a `yyyy-MM-dd` key, as a real instant. Returns null for
+ * anything that isn't a well-formed date, so a hand-edited URL can fall back
+ * to today rather than rendering an Invalid Date.
+ */
+export function gymDayFromKey(key: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
+  const fields = new Date(`${key}T00:00:00Z`);
+  if (Number.isNaN(fields.getTime())) return null;
   return fromGymFields(fields);
 }
 

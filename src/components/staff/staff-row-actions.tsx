@@ -30,6 +30,7 @@ import {
   updateStaffTarget,
   updateStaffPhone,
   deleteStaff,
+  type DeleteBlocker,
   setStaffActive,
 } from "@/lib/actions/staff";
 import type { Staff } from "@/generated/prisma/client";
@@ -163,28 +164,57 @@ export function StaffPhoneInput({ staff }: { staff: Staff }) {
   );
 }
 
+const BLOCKER_LABELS: Record<string, string> = {
+  sessions: "Sessions on the calendar",
+  recurringSlots: "Recurring slots",
+  activityLogs: "Notes in client history",
+  contactAttempts: "Lead contact attempts",
+  inBodyResults: "InBody results uploaded",
+  documents: "Client documents uploaded",
+  clockEvents: "Clock in/out records",
+  walletDeposits: "Wallet deposits recorded",
+  walletTransactions: "Wallet transactions recorded",
+  pettyCashExpenses: "Petty cash bills recorded",
+  walletAttachments: "Wallet attachments uploaded",
+};
+
+function describeFreed(clients: number, leads: number) {
+  const parts: string[] = [];
+  if (clients > 0) parts.push(`${clients} client${clients === 1 ? "" : "s"}`);
+  if (leads > 0) parts.push(`${leads} lead${leads === 1 ? "" : "s"}`);
+  return parts.join(" and ");
+}
+
 export function StaffDeleteButton({ staff, isSelf }: { staff: Staff; isSelf: boolean }) {
   const [open, setOpen] = useState(false);
-  // Set only when a delete attempt was blocked because the staff member has
-  // real history attached — switches the dialog to offering the one action
-  // that actually works (deactivate) instead of leaving admins at a dead end.
-  const [blocked, setBlocked] = useState(false);
+  // Set when a delete was refused because records of work still name this
+  // person. Switches the dialog to listing exactly what those are and offering
+  // the one action that does work, instead of leaving admins at a dead end.
+  const [blockers, setBlockers] = useState<DeleteBlocker[] | null>(null);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const blocked = blockers !== null;
 
   function onConfirmDelete() {
     startTransition(async () => {
       try {
-        await deleteStaff({ staffId: staff.id });
+        const result = await deleteStaff({ staffId: staff.id });
+        if (!result.ok) {
+          // Reported as data rather than as a thrown message, which production
+          // would have replaced with an opaque digest.
+          setBlockers(result.blockers);
+          return;
+        }
         setOpen(false);
         router.refresh();
-        toast.success(`${staff.name} deleted.`);
+        const freed = result.unassignedClients + result.unassignedLeads;
+        toast.success(
+          freed > 0
+            ? `${staff.name} deleted. ${describeFreed(result.unassignedClients, result.unassignedLeads)} moved back to unassigned.`
+            : `${staff.name} deleted.`
+        );
       } catch (err) {
-        if (err instanceof Error && err.message.includes("deactivate them instead")) {
-          setBlocked(true);
-        } else {
-          toast.error(friendlyErrorMessage(err, "Could not delete staff member."));
-        }
+        toast.error(friendlyErrorMessage(err, "Could not delete staff member."));
       }
     });
   }
@@ -207,7 +237,7 @@ export function StaffDeleteButton({ staff, isSelf }: { staff: Staff; isSelf: boo
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) setBlocked(false);
+        if (!next) setBlockers(null);
       }}
     >
       <DialogTrigger
@@ -223,11 +253,20 @@ export function StaffDeleteButton({ staff, isSelf }: { staff: Staff; isSelf: boo
             <DialogHeader>
               <DialogTitle>Can&apos;t delete {staff.name}</DialogTitle>
               <DialogDescription>
-                They have existing leads, clients, sessions, or activity on record, so deleting
-                would destroy that history. Deactivating blocks their sign-in immediately without
-                losing it.
+                These records name them as the person who did the work, so deleting would rewrite
+                what happened. Nothing was changed — their clients and leads are still assigned to
+                them. Deactivating blocks their sign-in immediately and keeps the history intact.
               </DialogDescription>
             </DialogHeader>
+
+            <ul className="flex flex-col gap-1 rounded-md border-s-4 border-amber-500/60 bg-amber-500/10 px-3 py-2 text-sm">
+              {(blockers ?? []).map((b) => (
+                <li key={b.key} className="flex items-center justify-between gap-3">
+                  <span>{BLOCKER_LABELS[b.key] ?? b.key}</span>
+                  <span className="tabular-nums text-muted-foreground">{b.count}</span>
+                </li>
+              ))}
+            </ul>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
                 Cancel
@@ -242,9 +281,10 @@ export function StaffDeleteButton({ staff, isSelf }: { staff: Staff; isSelf: boo
             <DialogHeader>
               <DialogTitle>Delete {staff.name}?</DialogTitle>
               <DialogDescription>
-                This permanently removes them from the sign-in allow-list. Only possible if they
-                have no leads, clients, sessions, or activity on record — if they do, you&apos;ll
-                get the option to deactivate instead.
+                This permanently removes them from the sign-in allow-list. Any clients and leads
+                they hold go back to unassigned. If they have sessions, notes or wallet entries on
+                record, those name them as the person who did the work, so the delete stops and
+                offers to deactivate instead.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

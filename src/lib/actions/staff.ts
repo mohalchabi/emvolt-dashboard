@@ -93,7 +93,37 @@ export async function updateStaffDetails(input: UpdateStaffDetailsInput) {
 // real business history or violate a foreign key, neither of which an admin
 // clicking "Delete" actually wants. Deactivating (which just blocks sign-in)
 // is the right tool once a staff member has any real history.
-export async function deleteStaff(input: { staffId: string }) {
+/** What is still pointing at a staff member and cannot be pointed elsewhere. */
+export type DeleteBlocker = { key: string; count: number };
+
+export type DeleteStaffResult =
+  | { ok: true; unassignedClients: number; unassignedLeads: number }
+  | { ok: false; blockers: DeleteBlocker[] };
+
+/**
+ * Rolled back to leave the unassignment undone when the delete can't go
+ * through. Thrown rather than returned so it escapes the transaction.
+ */
+class BlockedByHistory extends Error {
+  constructor(readonly blockers: DeleteBlocker[]) {
+    super("blocked");
+  }
+}
+
+/**
+ * Removes a staff member, handing their clients and leads back to the pool.
+ *
+ * Assignments are a statement about who is responsible now, so they are simply
+ * cleared. Records of work already done are not: a session that happened, a
+ * wallet entry, a note in a client's history all name the person who did it,
+ * and there is no honest value to put there instead. Those block the delete and
+ * are reported by name so the reason is obvious.
+ *
+ * Returns its outcome rather than throwing it, because Next.js replaces server
+ * action error messages with an opaque digest in production builds — a thrown
+ * explanation never reaches the admin reading it.
+ */
+export async function deleteStaff(input: { staffId: string }): Promise<DeleteStaffResult> {
   const session = await requireRole(["admin"]);
   const data = deleteStaffSchema.parse(input);
 
@@ -101,26 +131,80 @@ export async function deleteStaff(input: { staffId: string }) {
     throw new Error("You can't delete your own account.");
   }
 
-  const [leads, clients, sessions, slots, logs, attempts, inbody, messages] = await Promise.all([
-    prisma.lead.count({ where: { assignedStaffId: data.staffId } }),
-    prisma.client.count({ where: { assignedTrainerId: data.staffId } }),
-    prisma.session.count({ where: { trainerId: data.staffId } }),
-    prisma.recurringSlot.count({ where: { trainerId: data.staffId } }),
-    prisma.activityLog.count({ where: { authorId: data.staffId } }),
-    prisma.leadContactAttempt.count({ where: { staffId: data.staffId } }),
-    prisma.inBodyResult.count({ where: { uploadedById: data.staffId } }),
-    prisma.message.count({ where: { authorStaffId: data.staffId } }),
-  ]);
-  const hasHistory = [leads, clients, sessions, slots, logs, attempts, inbody, messages].some((n) => n > 0);
-  if (hasHistory) {
-    throw new Error(
-      "This staff member has existing leads, clients, sessions, or activity — deactivate them instead of deleting."
-    );
+  const staffId = data.staffId;
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      // Hand the people back to the pool first, so a trainer who only ever
+      // held assignments deletes cleanly.
+      const [{ count: unassignedClients }, { count: unassignedLeads }] = await Promise.all([
+        tx.client.updateMany({
+          where: { assignedTrainerId: staffId },
+          data: { assignedTrainerId: null },
+        }),
+        tx.lead.updateMany({
+          where: { assignedStaffId: staffId },
+          data: { assignedStaffId: null },
+        }),
+      ]);
+
+      // The rest of the nullable links are attribution rather than assignment,
+      // and drop to "no longer on staff" just as cleanly.
+      await Promise.all([
+        tx.message.updateMany({
+          where: { authorStaffId: staffId },
+          data: { authorStaffId: null },
+        }),
+        tx.walletTransaction.updateMany({
+          where: { payeeStaffId: staffId },
+          data: { payeeStaffId: null },
+        }),
+        tx.pettyCashExpense.updateMany({ where: { spentById: staffId }, data: { spentById: null } }),
+      ]);
+
+      const counts = await Promise.all([
+        tx.session.count({ where: { trainerId: staffId } }),
+        tx.recurringSlot.count({ where: { trainerId: staffId } }),
+        tx.activityLog.count({ where: { authorId: staffId } }),
+        tx.leadContactAttempt.count({ where: { staffId } }),
+        tx.inBodyResult.count({ where: { uploadedById: staffId } }),
+        tx.clientDocument.count({ where: { uploadedById: staffId } }),
+        tx.clockEvent.count({ where: { staffId } }),
+        tx.walletDeposit.count({ where: { recordedById: staffId } }),
+        tx.walletTransaction.count({ where: { recordedById: staffId } }),
+        tx.pettyCashExpense.count({ where: { recordedById: staffId } }),
+        tx.walletAttachment.count({ where: { uploadedById: staffId } }),
+      ]);
+      const keys = [
+        "sessions",
+        "recurringSlots",
+        "activityLogs",
+        "contactAttempts",
+        "inBodyResults",
+        "documents",
+        "clockEvents",
+        "walletDeposits",
+        "walletTransactions",
+        "pettyCashExpenses",
+        "walletAttachments",
+      ];
+      const blockers = keys
+        .map((key, i) => ({ key, count: counts[i] }))
+        .filter((b) => b.count > 0);
+
+      if (blockers.length > 0) throw new BlockedByHistory(blockers);
+
+      await tx.staff.delete({ where: { id: staffId } });
+      return { ok: true as const, unassignedClients, unassignedLeads };
+    });
+  } catch (err) {
+    if (err instanceof BlockedByHistory) return { ok: false as const, blockers: err.blockers };
+    throw err;
+  } finally {
+    revalidatePath("/staff");
+    revalidatePath("/clients");
+    revalidatePath("/leads");
   }
-
-  await prisma.staff.delete({ where: { id: data.staffId } });
-
-  revalidatePath("/staff");
 }
 
 export async function setStaffActive(input: { staffId: string; active: boolean }) {
