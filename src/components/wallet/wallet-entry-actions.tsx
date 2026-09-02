@@ -16,15 +16,24 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { upload } from "@vercel/blob/client";
 import {
-  addWalletReceipts,
+  recordWalletUploads,
   deleteWalletAttachment,
   deleteWalletDeposit,
   deleteWalletTransaction,
   deletePettyCashExpense,
 } from "@/lib/actions/wallet";
+import {
+  WALLET_UPLOAD_MAX_BYTES,
+  formatBytes,
+  isAllowedWalletUploadType,
+  safeUploadName,
+  walletUploadPrefix,
+  type WalletEntryKind,
+} from "@/lib/wallet-uploads";
 
-export type WalletEntryKind = "deposit" | "transaction" | "petty_cash_expense";
+export type { WalletEntryKind };
 
 export type EntryAttachment = { id: string; fileName: string };
 
@@ -80,16 +89,50 @@ function DocumentsDialog({
 
   function onUpload(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    formData.set("kind", kind);
-    formData.set("entryId", entryId);
+    const input = event.currentTarget.elements.namedItem("files") as HTMLInputElement | null;
+    const files = Array.from(input?.files ?? []);
+    if (files.length === 0) {
+      toast.error("Choose a PDF or photo to upload.");
+      return;
+    }
+
+    // Checked here, before a byte leaves the device, so someone picking a file
+    // that's too large is told which one and how big rather than watching an
+    // upload run to completion and fail.
+    for (const file of files) {
+      if (file.type && !isAllowedWalletUploadType(file.type)) {
+        toast.error(`"${file.name}" isn't a PDF or an image.`);
+        return;
+      }
+      if (file.size > WALLET_UPLOAD_MAX_BYTES) {
+        toast.error(
+          `"${file.name}" is ${formatBytes(file.size)}. The most you can upload at once is ${formatBytes(WALLET_UPLOAD_MAX_BYTES)}.`
+        );
+        return;
+      }
+    }
 
     startTransition(async () => {
       try {
-        await addWalletReceipts(formData);
+        // Straight to Blob storage: routing these through a Server Action put
+        // them inside the function request body, which Vercel caps at 4.5 MB.
+        const prefix = walletUploadPrefix(kind, entryId);
+        const blobs = await Promise.all(
+          files.map(async (file) => {
+            const result = await upload(`${prefix}${safeUploadName(file.name)}`, file, {
+              access: "private",
+              handleUploadUrl: "/api/wallet-attachments/upload",
+              clientPayload: JSON.stringify({ kind, entryId }),
+              contentType: file.type || undefined,
+            });
+            return { url: result.url, pathname: result.pathname, fileName: file.name };
+          })
+        );
+
+        await recordWalletUploads({ kind, entryId, blobs });
         formRef.current?.reset();
         router.refresh();
-        toast.success("Document added.");
+        toast.success(files.length === 1 ? "Document added." : `${files.length} documents added.`);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Could not add the document.");
       }
@@ -162,7 +205,7 @@ function DocumentsDialog({
               multiple
               required
             />
-            <p className="text-xs text-muted-foreground">PDF or photo, 4.5 MB per upload.</p>
+            <p className="text-xs text-muted-foreground">PDF or photo, up to 25 MB each.</p>
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isPending}>

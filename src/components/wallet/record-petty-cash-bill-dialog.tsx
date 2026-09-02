@@ -26,6 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { recordPettyCashExpense } from "@/lib/actions/wallet";
 import { localDateString } from "@/lib/utils";
 import { formatSar } from "@/lib/wallet";
+import { inlineUploadProblem } from "@/lib/wallet-uploads";
 
 /**
  * Logs one purchase made out of a petty cash float, with the supplier's VAT
@@ -57,6 +58,12 @@ export function RecordPettyCashBillDialog({
     const formData = new FormData(event.currentTarget);
     formData.set("issueId", issueId);
     formData.set("spentById", spentBy);
+
+    const problem = inlineUploadProblem(formData);
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -180,7 +187,7 @@ export function RecordPettyCashBillDialog({
               multiple
             />
             <p className="text-xs text-muted-foreground">
-              PDF or photo, 4.5 MB per upload. You can add it later.
+              PDF or photo, up to 4 MB here. Larger files go on the row afterwards.
             </p>
           </div>
 

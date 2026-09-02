@@ -558,7 +558,7 @@ export const en = {
     description: "What was it? (optional)",
     descriptionPlaceholder: "e.g. cleaning supplies, water for the studio",
     invoice: "Photo of the bill",
-    invoiceHint: "Take a photo, pick one from your gallery, or attach a PDF. Up to 4.5 MB.",
+    invoiceHint: "Take a photo, pick one from your gallery, or attach a PDF. Up to 4 MB.",
     save: "Save",
     saving: "Saving...",
     saved: "Purchase saved.",

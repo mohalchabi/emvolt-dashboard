@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { recordWalletDeposit } from "@/lib/actions/wallet";
 import { localDateString } from "@/lib/utils";
+import { inlineUploadProblem } from "@/lib/wallet-uploads";
 
 export function RecordDepositDialog() {
   const [open, setOpen] = useState(false);
@@ -28,6 +29,12 @@ export function RecordDepositDialog() {
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+
+    const problem = inlineUploadProblem(formData);
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -110,7 +117,7 @@ export function RecordDepositDialog() {
               multiple
             />
             <p className="text-xs text-muted-foreground">
-              PDF or photo, 4.5 MB per upload. You can add it later.
+              PDF or photo, up to 4 MB here. Larger files go on the row afterwards.
             </p>
           </div>
 
