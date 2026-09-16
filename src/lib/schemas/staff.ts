@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { STAFF_ROLES, SECTIONS } from "@/lib/constants";
+import { MIN_PASSWORD_LENGTH } from "@/lib/password-policy";
 
 export const createStaffSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -39,4 +40,22 @@ export type UpdateStaffDetailsInput = z.infer<typeof updateStaffDetailsSchema>;
 
 export const deleteStaffSchema = z.object({
   staffId: z.string(),
+});
+
+const password = z
+  .string()
+  .min(
+    MIN_PASSWORD_LENGTH,
+    `Use at least ${MIN_PASSWORD_LENGTH} characters — length is what makes it hard to guess.`
+  )
+  .max(200, "That password is too long.");
+
+export const setStaffPasswordSchema = z.object({
+  staffId: z.string(),
+  password,
+});
+
+export const changeMyPasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Enter your current password."),
+  newPassword: password,
 });
