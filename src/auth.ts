@@ -4,6 +4,7 @@ import type { JWT } from "next-auth/jwt";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
+import { decoyPasswordHash, verifyPassword } from "@/lib/password";
 import type { StaffRole, Section } from "@/lib/constants";
 
 declare module "next-auth" {
@@ -34,6 +35,32 @@ const providers: NextAuthConfig["providers"] = [
   Google({
     clientId: process.env.GOOGLE_CLIENT_ID ?? "",
     clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+  }),
+  // For staff whose address Google can't serve — a hotmail one, say. Only
+  // accounts an admin has actually set a password for can use this; everyone
+  // else has a null hash and is refused however right their password looks.
+  Credentials({
+    id: "password",
+    name: "Email and password",
+    credentials: {
+      email: { label: "Email", type: "email" },
+      password: { label: "Password", type: "password" },
+    },
+    async authorize(credentials) {
+      const email = String(credentials?.email ?? "").trim().toLowerCase();
+      const password = String(credentials?.password ?? "");
+      if (!email || !password) return null;
+
+      const staff = await prisma.staff.findUnique({ where: { email } });
+
+      // Verified either way, against a decoy when there's no account, so an
+      // unknown address takes as long to reject as a wrong password.
+      const hash = staff?.passwordHash ?? (await decoyPasswordHash());
+      const matches = await verifyPassword(password, hash);
+
+      if (!staff || !staff.active || !staff.passwordHash || !matches) return null;
+      return { id: staff.id, name: staff.name, email: staff.email };
+    },
   }),
 ];
 

@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/auth-helpers";
+import { hashPassword, verifyPassword } from "@/lib/password";
+import { requireRole, requireSession } from "@/lib/auth-helpers";
 import {
   createStaffSchema,
   updateStaffRoleSchema,
@@ -10,6 +11,8 @@ import {
   updateStaffPhoneSchema,
   updateStaffDetailsSchema,
   deleteStaffSchema,
+  setStaffPasswordSchema,
+  changeMyPasswordSchema,
   setStaffActiveSchema,
   type CreateStaffInput,
   type UpdateStaffDetailsInput,
@@ -87,12 +90,6 @@ export async function updateStaffDetails(input: UpdateStaffDetailsInput) {
   revalidatePath("/staff");
 }
 
-// A hard delete only makes sense for a staff row that never actually did
-// anything (e.g. created by mistake) — once they've got sessions, leads,
-// activity logs, etc. attached, deleting them would either cascade-destroy
-// real business history or violate a foreign key, neither of which an admin
-// clicking "Delete" actually wants. Deactivating (which just blocks sign-in)
-// is the right tool once a staff member has any real history.
 /** What is still pointing at a staff member and cannot be pointed elsewhere. */
 export type DeleteBlocker = { key: string; count: number };
 
@@ -205,6 +202,63 @@ export async function deleteStaff(input: { staffId: string }): Promise<DeleteSta
     revalidatePath("/clients");
     revalidatePath("/leads");
   }
+}
+
+/**
+ * Gives a staff member a password, so they can sign in without Google.
+ *
+ * For an address Google can't serve. The password is never stored or returned
+ * in the clear, so an admin who forgets what they set has to set a new one —
+ * there is nothing to look up.
+ */
+export async function setStaffPassword(input: { staffId: string; password: string }) {
+  await requireRole(["admin"]);
+  const data = setStaffPasswordSchema.parse(input);
+
+  const staff = await prisma.staff.findUnique({ where: { id: data.staffId } });
+  if (!staff) throw new Error("That staff member no longer exists.");
+
+  await prisma.staff.update({
+    where: { id: data.staffId },
+    data: { passwordHash: await hashPassword(data.password) },
+  });
+
+  revalidatePath("/staff");
+}
+
+/** Takes the password away again, leaving the account Google-only. */
+export async function clearStaffPassword(input: { staffId: string }) {
+  await requireRole(["admin"]);
+
+  await prisma.staff.update({
+    where: { id: input.staffId },
+    data: { passwordHash: null },
+  });
+
+  revalidatePath("/staff");
+}
+
+/**
+ * Lets someone change their own password, which the admin who set it can't
+ * see. Requires the current one, so a session left open on a shared screen
+ * can't be used to take the account over.
+ */
+export async function changeMyPassword(input: { currentPassword: string; newPassword: string }) {
+  const session = await requireSession();
+  const data = changeMyPasswordSchema.parse(input);
+
+  const staff = await prisma.staff.findUnique({ where: { id: session.user.id } });
+  if (!staff?.passwordHash) {
+    throw new Error("Your account signs in with Google, so it has no password to change.");
+  }
+  if (!(await verifyPassword(data.currentPassword, staff.passwordHash))) {
+    throw new Error("That current password isn't right.");
+  }
+
+  await prisma.staff.update({
+    where: { id: staff.id },
+    data: { passwordHash: await hashPassword(data.newPassword) },
+  });
 }
 
 export async function setStaffActive(input: { staffId: string; active: boolean }) {

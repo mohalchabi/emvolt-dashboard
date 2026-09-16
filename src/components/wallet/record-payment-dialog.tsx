@@ -31,6 +31,7 @@ import {
 } from "@/lib/constants";
 import { recordWalletTransaction } from "@/lib/actions/wallet";
 import { localDateString } from "@/lib/utils";
+import { inlineUploadProblem } from "@/lib/wallet-uploads";
 
 const OTHER_PAYEE = "__other";
 
@@ -71,6 +72,12 @@ export function RecordPaymentDialog({ staff }: { staff: { id: string; name: stri
     formData.set("category", category);
     formData.set("method", method);
     formData.set("payeeStaffId", payee === OTHER_PAYEE ? "" : payee);
+
+    const problem = inlineUploadProblem(formData);
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -214,7 +221,7 @@ export function RecordPaymentDialog({ staff }: { staff: { id: string; name: stri
               multiple
             />
             <p className="text-xs text-muted-foreground">
-              PDF or photo, 4.5 MB per upload. You can add it later.
+              PDF or photo, up to 4 MB here. Larger files go on the row afterwards.
             </p>
           </div>
 

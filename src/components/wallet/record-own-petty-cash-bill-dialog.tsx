@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { recordOwnPettyCashExpense } from "@/lib/actions/wallet";
 import { localDateString } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n";
+import { inlineUploadProblem } from "@/lib/wallet-uploads";
 
 /**
  * The holder's own version of RecordPettyCashBillDialog: same purchase, filed
@@ -48,6 +49,12 @@ export function RecordOwnPettyCashBillDialog({
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     formData.set("issueId", issueId);
+
+    const problem = inlineUploadProblem(formData);
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
 
     startTransition(async () => {
       try {

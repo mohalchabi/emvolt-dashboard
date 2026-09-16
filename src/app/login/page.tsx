@@ -1,8 +1,13 @@
 import Image from "next/image";
+import { AuthError } from "next-auth";
 import { signIn } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { getDictionary } from "@/lib/i18n";
+import {
+  PasswordLoginForm,
+  type PasswordLoginState,
+} from "@/components/auth/password-login-form";
 
 const ADMIN_PHONE = "+966541233047";
 
@@ -14,6 +19,27 @@ export default async function LoginPage({
   async function handleGoogleSignIn() {
     "use server";
     await signIn("google", { redirectTo: "/" });
+  }
+
+  async function handlePasswordSignIn(
+    _state: PasswordLoginState,
+    formData: FormData
+  ): Promise<PasswordLoginState> {
+    "use server";
+    const { t: dict } = await getDictionary();
+    try {
+      await signIn("password", {
+        email: String(formData.get("email") ?? ""),
+        password: String(formData.get("password") ?? ""),
+        redirectTo: "/",
+      });
+      return { error: null };
+    } catch (err) {
+      // A successful sign-in finishes by throwing the redirect, so that has to
+      // travel on rather than be reported as a failure.
+      if (err instanceof AuthError) return { error: dict.login.wrongPassword };
+      throw err;
+    }
   }
 
   const { t } = await getDictionary();
@@ -43,6 +69,14 @@ export default async function LoginPage({
               {t.login.button}
             </Button>
           </form>
+
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">{t.login.or}</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <PasswordLoginForm action={handlePasswordSignIn} t={t.login} />
         </CardContent>
       </Card>
     </div>

@@ -22,6 +22,10 @@ model Staff {
   section    String? // male | female | null (both/admin/front-desk)
   active     Boolean  @default(true)
   avatarUrl  String?
+  // Set only for staff who sign in with a password instead of Google — for an
+  // address Google can't serve, such as a hotmail one. Null means the account
+  // is Google-only, and the password provider refuses it outright.
+  passwordHash String?
   leadTarget Int? // admin-set target # of leads to work through (e.g. weekly); null = not set
   createdAt  DateTime @default(now())
 

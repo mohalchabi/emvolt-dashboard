@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { put, del } from "@vercel/blob";
+import { put, del, head } from "@vercel/blob";
 import type { ZodType } from "zod";
 import { prisma } from "@/lib/db";
 import { requireRole, requireSession } from "@/lib/auth-helpers";
@@ -12,16 +12,19 @@ import {
   pettyCashExpenseSchema,
 } from "@/lib/schemas/wallet";
 import { parseDateOnly } from "@/lib/wallet";
+import {
+  WALLET_INLINE_UPLOAD_MAX_BYTES,
+  isWalletEntryKind,
+  walletUploadPrefix,
+  type WalletEntryKind,
+} from "@/lib/wallet-uploads";
 
 // Entries can carry documents — a bank transfer slip for money in and out,
 // the supplier's VAT invoice for a petty-cash purchase — but none of them are
 // required: an entry with no paperwork still belongs in the ledger, and the
-// files can always be attached later. The cap is the whole submission, not the
-// individual file, because the upload rides inside the Server Action's
-// request body.
-const MAX_UPLOAD_BYTES = 4.5 * 1024 * 1024;
-
-type WalletEntryKind = "deposit" | "transaction" | "petty_cash_expense";
+// files can always be attached later, where the limit is far higher. The cap
+// is the whole submission, not the individual file, because these uploads ride
+// inside the Server Action's request body.
 
 function text(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -49,8 +52,10 @@ function readReceipts(formData: FormData): File[] {
     }
   }
   const total = files.reduce((sum, file) => sum + file.size, 0);
-  if (total > MAX_UPLOAD_BYTES) {
-    throw new Error("Those files add up to more than 4.5 MB — upload them in smaller batches.");
+  if (total > WALLET_INLINE_UPLOAD_MAX_BYTES) {
+    throw new Error(
+      "That paperwork is too large to go on while the entry is being created — save it first, then add the files to the row."
+    );
   }
   return files;
 }
@@ -258,33 +263,54 @@ export async function recordOwnPettyCashExpense(formData: FormData) {
 }
 
 /** Attach more paperwork to an entry that already exists. */
-export async function addWalletReceipts(formData: FormData) {
+/**
+ * Records paperwork the browser has already put in Blob storage.
+ *
+ * The upload no longer passes through here — see lib/wallet-uploads — so this
+ * only writes the rows that point at it. Both claims the browser makes are
+ * checked rather than trusted: the key has to sit under the prefix the token
+ * was issued for, and the blob has to actually exist, so a stray or invented
+ * URL can't be filed as an invoice.
+ */
+export async function recordWalletUploads(input: {
+  kind: WalletEntryKind;
+  entryId: string;
+  blobs: { url: string; pathname: string; fileName: string }[];
+}) {
   const session = await requireRole(["admin"]);
 
-  const kind = text(formData, "kind") as WalletEntryKind;
-  const entryId = text(formData, "entryId");
-  if (!entryId) throw new Error("Missing entry.");
+  if (!isWalletEntryKind(input.kind)) throw new Error("Unknown entry type.");
+  if (!input.entryId) throw new Error("Missing entry.");
+  if (input.blobs.length === 0) throw new Error("Choose a PDF or photo to upload.");
 
-  const folder =
-    kind === "deposit" ? "deposits" : kind === "transaction" ? "payments" : "petty-cash";
-  const files = readReceipts(formData);
-  // Uploading nothing is a no-op everywhere else, but here it's the whole
-  // point of the form, so it's worth saying so.
-  if (files.length === 0) throw new Error("Choose a PDF or photo to upload.");
-  const uploaded = await uploadReceipts(`${folder}/${entryId}`, files, session.user.id);
+  const prefix = walletUploadPrefix(input.kind, input.entryId);
+  for (const blob of input.blobs) {
+    if (!blob.pathname.startsWith(prefix)) throw new Error("That file isn't filed under this entry.");
+  }
+
+  await Promise.all(
+    input.blobs.map(async (blob) => {
+      const found = await head(blob.url, { token: process.env.BLOB_READ_WRITE_TOKEN });
+      if (!found || found.pathname !== blob.pathname) {
+        throw new Error("That upload could not be verified. Try again.");
+      }
+    })
+  );
 
   const link =
-    kind === "deposit"
-      ? { depositId: entryId }
-      : kind === "transaction"
-        ? { transactionId: entryId }
-        : kind === "petty_cash_expense"
-          ? { pettyCashExpenseId: entryId }
-          : null;
-  if (!link) throw new Error("Unknown entry type.");
+    input.kind === "deposit"
+      ? { depositId: input.entryId }
+      : input.kind === "transaction"
+        ? { transactionId: input.entryId }
+        : { pettyCashExpenseId: input.entryId };
 
   await prisma.walletAttachment.createMany({
-    data: uploaded.map((attachment) => ({ ...attachment, ...link })),
+    data: input.blobs.map((blob) => ({
+      fileUrl: blob.url,
+      fileName: blob.fileName,
+      uploadedById: session.user.id,
+      ...link,
+    })),
   });
 
   revalidateWallet();

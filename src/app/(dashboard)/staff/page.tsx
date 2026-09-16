@@ -19,6 +19,7 @@ import {
   StaffActiveToggle,
   StaffDeleteButton,
 } from "@/components/staff/staff-row-actions";
+import { StaffPasswordButton } from "@/components/staff/staff-password-button";
 
 export default async function StaffPage() {
   const session = await requireRole(["admin"]);
@@ -62,6 +63,7 @@ export default async function StaffPage() {
                   </div>
                   <div className="flex items-center">
                     <EditStaffDialog staff={s} />
+                    <StaffPasswordButton staff={s} />
                     <StaffDeleteButton staff={s} isSelf={s.id === session.user.id} />
                   </div>
                 </div>
@@ -126,6 +128,7 @@ export default async function StaffPage() {
                       <TableCell>
                         <div className="flex items-center justify-end">
                           <EditStaffDialog staff={s} />
+                          <StaffPasswordButton staff={s} />
                           <StaffDeleteButton staff={s} isSelf={s.id === session.user.id} />
                         </div>
                       </TableCell>
