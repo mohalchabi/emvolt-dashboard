@@ -2,7 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/auth-helpers";
 import { packageBalances } from "@/lib/package-balance";
-import { label, CLIENT_STATUSES, MANAGER_ROLES } from "@/lib/constants";
+import { label, isManagerRole, CLIENT_STATUSES, MANAGER_ROLES } from "@/lib/constants";
+import { countFinishedClients } from "@/lib/client-completion";
 import { getDictionary } from "@/lib/i18n";
 import { HelpTip } from "@/components/help/help-tip";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { NewClientDialog } from "@/components/clients/new-client-dialog";
 import { ClientFilters } from "@/components/clients/client-filters";
 
@@ -29,7 +31,8 @@ export default async function ClientsPage({
 }: {
   searchParams: Promise<{ status?: string; section?: string; trainer?: string }>;
 }) {
-  await requireRole([...MANAGER_ROLES, "front_desk"]);
+  const session = await requireRole([...MANAGER_ROLES, "front_desk"]);
+  const canReview = isManagerRole(session.user.role);
   const params = await searchParams;
   const { t } = await getDictionary();
 
@@ -66,6 +69,14 @@ export default async function ClientsPage({
     CLIENT_STATUSES.map((s) => [s, clients.filter((c) => c.status === s).length])
   );
 
+  // Counted across every client, not just the ones passing the current
+  // filters, so the badge doesn't change meaning as the filters move.
+  const [finishedCount, openPastCount] = await Promise.all([
+    countFinishedClients(),
+    prisma.session.count({ where: { status: "scheduled", datetime: { lt: new Date() } } }),
+  ]);
+  const needsReview = finishedCount + openPastCount;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -84,7 +95,17 @@ export default async function ClientsPage({
             {clients.length === 1 ? t.clientsPage.matchingSingular : t.clientsPage.matchingPlural}
           </p>
         </div>
-        <NewClientDialog trainers={trainers} t={t.clientsPage} />
+        <div className="flex items-center gap-2">
+          {canReview && needsReview > 0 && (
+            <Button variant="outline" render={<Link href="/clients/review" />}>
+              {t.clientsPage.reviewFinished}
+              <Badge variant="secondary" className="ms-1.5 tabular-nums">
+                {needsReview}
+              </Badge>
+            </Button>
+          )}
+          <NewClientDialog trainers={trainers} t={t.clientsPage} />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
