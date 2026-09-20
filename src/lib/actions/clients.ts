@@ -162,6 +162,46 @@ export async function markClientsFinished(input: { clientIds: string[]; status?:
   return { changed: eligible.length, skipped };
 }
 
+/**
+ * Sets the status on several clients at once.
+ *
+ * Separate from markClientsFinished, which only ever retires people who used
+ * everything they bought. Most of the people who stop coming don't finish
+ * first — they simply stop — and there is no way to derive that from the
+ * records, so this one takes the admin's word for it and logs who said so.
+ */
+export async function setClientsStatus(input: { clientIds: string[]; status: string }) {
+  const session = await requireRole([...MANAGER_ROLES]);
+  if (!(CLIENT_STATUSES as readonly string[]).includes(input.status)) {
+    throw new Error("Unknown status.");
+  }
+  if (input.clientIds.length === 0) return { changed: 0 };
+
+  // Clients already on that status are left out, so the activity feed doesn't
+  // fill with entries recording that nothing changed.
+  const toChange = await prisma.client.findMany({
+    where: { id: { in: input.clientIds }, status: { not: input.status } },
+    select: { id: true },
+  });
+  if (toChange.length === 0) return { changed: 0 };
+
+  const ids = toChange.map((c) => c.id);
+  await prisma.$transaction([
+    prisma.client.updateMany({ where: { id: { in: ids } }, data: { status: input.status } }),
+    prisma.activityLog.createMany({
+      data: ids.map((clientId) => ({
+        clientId,
+        authorId: session.user.id,
+        text: `Status changed to ${label(input.status)}.`,
+      })),
+    }),
+  ]);
+
+  revalidatePath("/clients");
+  for (const id of ids) revalidatePath(`/clients/${id}`);
+  return { changed: ids.length };
+}
+
 export async function assignTrainer(input: { clientId: string; assignedTrainerId: string | null }) {
   const session = await requireSession();
   const data = assignTrainerSchema.parse(input);
