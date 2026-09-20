@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireSession, requireRole } from "@/lib/auth-helpers";
 import { createClientSession } from "@/lib/client-auth";
-import { label, isManagerRole, MANAGER_ROLES } from "@/lib/constants";
+import { label, isManagerRole, CLIENT_STATUSES, MANAGER_ROLES } from "@/lib/constants";
 import { addNoteSchema } from "@/lib/schemas/lead";
 import { packageBalances } from "@/lib/package-balance";
+import { clientCompletions } from "@/lib/client-completion";
 import { isSlotAvailable, overlaps, DEFAULT_SESSION_DURATION } from "@/lib/portal-availability";
 import {
   createClientSchema,
@@ -120,6 +121,85 @@ export async function updateClientStatus(input: { clientId: string; status: stri
 
   revalidatePath("/clients");
   revalidatePath(`/clients/${data.clientId}`);
+}
+
+/**
+ * Retires several clients at once, for the people who worked through
+ * everything they bought.
+ *
+ * Each one is re-checked here rather than trusted from the list the browser
+ * sent: the page that offered them may be minutes old, and in that time
+ * someone can have booked a class or sold a renewal. A client who no longer
+ * qualifies is skipped and counted, not quietly retired anyway.
+ */
+export async function markClientsFinished(input: { clientIds: string[]; status?: string }) {
+  const session = await requireRole([...MANAGER_ROLES]);
+  const status = input.status ?? "churned";
+  if (!(CLIENT_STATUSES as readonly string[]).includes(status)) {
+    throw new Error("Unknown status.");
+  }
+  if (input.clientIds.length === 0) return { changed: 0, skipped: [] as string[] };
+
+  const completions = await clientCompletions(input.clientIds);
+  const eligible = input.clientIds.filter((id) => completions.get(id)?.finished);
+  const skipped = input.clientIds.filter((id) => !completions.get(id)?.finished);
+
+  if (eligible.length > 0) {
+    await prisma.$transaction([
+      prisma.client.updateMany({ where: { id: { in: eligible } }, data: { status } }),
+      prisma.activityLog.createMany({
+        data: eligible.map((clientId) => ({
+          clientId,
+          authorId: session.user.id,
+          text: `Status changed to ${label(status)} — every session on their packages was used.`,
+        })),
+      }),
+    ]);
+  }
+
+  revalidatePath("/clients");
+  for (const id of eligible) revalidatePath(`/clients/${id}`);
+  return { changed: eligible.length, skipped };
+}
+
+/**
+ * Sets the status on several clients at once.
+ *
+ * Separate from markClientsFinished, which only ever retires people who used
+ * everything they bought. Most of the people who stop coming don't finish
+ * first — they simply stop — and there is no way to derive that from the
+ * records, so this one takes the admin's word for it and logs who said so.
+ */
+export async function setClientsStatus(input: { clientIds: string[]; status: string }) {
+  const session = await requireRole([...MANAGER_ROLES]);
+  if (!(CLIENT_STATUSES as readonly string[]).includes(input.status)) {
+    throw new Error("Unknown status.");
+  }
+  if (input.clientIds.length === 0) return { changed: 0 };
+
+  // Clients already on that status are left out, so the activity feed doesn't
+  // fill with entries recording that nothing changed.
+  const toChange = await prisma.client.findMany({
+    where: { id: { in: input.clientIds }, status: { not: input.status } },
+    select: { id: true },
+  });
+  if (toChange.length === 0) return { changed: 0 };
+
+  const ids = toChange.map((c) => c.id);
+  await prisma.$transaction([
+    prisma.client.updateMany({ where: { id: { in: ids } }, data: { status: input.status } }),
+    prisma.activityLog.createMany({
+      data: ids.map((clientId) => ({
+        clientId,
+        authorId: session.user.id,
+        text: `Status changed to ${label(input.status)}.`,
+      })),
+    }),
+  ]);
+
+  revalidatePath("/clients");
+  for (const id of ids) revalidatePath(`/clients/${id}`);
+  return { changed: ids.length };
 }
 
 export async function assignTrainer(input: { clientId: string; assignedTrainerId: string | null }) {

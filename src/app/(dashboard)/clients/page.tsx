@@ -2,21 +2,16 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/auth-helpers";
 import { packageBalances } from "@/lib/package-balance";
-import { label, CLIENT_STATUSES, MANAGER_ROLES } from "@/lib/constants";
+import { label, isManagerRole, CLIENT_STATUSES, MANAGER_ROLES } from "@/lib/constants";
+import { countFinishedClients } from "@/lib/client-completion";
+import { formatGymDate } from "@/lib/time";
 import { getDictionary } from "@/lib/i18n";
 import { HelpTip } from "@/components/help/help-tip";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { NewClientDialog } from "@/components/clients/new-client-dialog";
 import { ClientFilters } from "@/components/clients/client-filters";
+import { ClientsList } from "@/components/clients/clients-list";
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   active: "default",
@@ -29,9 +24,10 @@ export default async function ClientsPage({
 }: {
   searchParams: Promise<{ status?: string; section?: string; trainer?: string }>;
 }) {
-  await requireRole([...MANAGER_ROLES, "front_desk"]);
+  const session = await requireRole([...MANAGER_ROLES, "front_desk"]);
+  const canReview = isManagerRole(session.user.role);
   const params = await searchParams;
-  const { t } = await getDictionary();
+  const { locale, t } = await getDictionary();
 
   const [clients, trainers] = await Promise.all([
     prisma.client.findMany({
@@ -66,6 +62,14 @@ export default async function ClientsPage({
     CLIENT_STATUSES.map((s) => [s, clients.filter((c) => c.status === s).length])
   );
 
+  // Counted across every client, not just the ones passing the current
+  // filters, so the badge doesn't change meaning as the filters move.
+  const [finishedCount, openPastCount] = await Promise.all([
+    countFinishedClients(),
+    prisma.session.count({ where: { status: "scheduled", datetime: { lt: new Date() } } }),
+  ]);
+  const needsReview = finishedCount + openPastCount;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -84,7 +88,17 @@ export default async function ClientsPage({
             {clients.length === 1 ? t.clientsPage.matchingSingular : t.clientsPage.matchingPlural}
           </p>
         </div>
-        <NewClientDialog trainers={trainers} t={t.clientsPage} />
+        <div className="flex items-center gap-2">
+          {canReview && needsReview > 0 && (
+            <Button variant="outline" render={<Link href="/clients/review" />}>
+              {t.clientsPage.reviewFinished}
+              <Badge variant="secondary" className="ms-1.5 tabular-nums">
+                {needsReview}
+              </Badge>
+            </Button>
+          )}
+          <NewClientDialog trainers={trainers} t={t.clientsPage} />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -103,114 +117,22 @@ export default async function ClientsPage({
         trainers={trainers}
       />
 
-      {clients.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">
-            {t.clientsPage.noneMatch}
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          {/* Mobile: stacked cards */}
-          <div className="flex flex-col gap-2 sm:hidden">
-            {clients.map((client) => {
-              const remaining = remainingForClient(client.packages);
-              return (
-                <Link
-                  key={client.id}
-                  href={`/clients/${client.id}`}
-                  className="flex flex-col gap-1 rounded-lg border bg-card p-3 active:bg-accent"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{client.name}</span>
-                    <div className="flex gap-1">
-                      {hasRenewalRequest(client.packages) && (
-                        <Badge variant="outline" className="border-amber-500/60 text-amber-400">
-                          {t.clientsPage.renewalRequested}
-                        </Badge>
-                      )}
-                      <Badge variant={STATUS_VARIANT[client.status]}>{label(client.status)}</Badge>
-                    </div>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {client.phone} · {label(client.section)}
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{client.assignedTrainer?.name ?? t.clientsPage.unassigned}</span>
-                    {remaining === null ? (
-                      <span>{t.clientsPage.noActivePackage}</span>
-                    ) : (
-                      <span className={remaining <= 2 ? "font-medium text-destructive" : ""}>
-                        {remaining} {t.clientsPage.sessionsLeft}
-                      </span>
-                    )}
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Desktop: table */}
-          <Card className="hidden sm:block">
-            <CardContent className="overflow-x-auto p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.clientsPage.colName}</TableHead>
-                    <TableHead>{t.clientsPage.colPhone}</TableHead>
-                    <TableHead>{t.clientsPage.colSection}</TableHead>
-                    <TableHead>{t.clientsPage.colStatus}</TableHead>
-                    <TableHead>{t.clientsPage.colTrainer}</TableHead>
-                    <TableHead>{t.clientsPage.colSessionsLeft}</TableHead>
-                    <TableHead>{t.clientsPage.colClientSince}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {clients.map((client) => {
-                    const remaining = remainingForClient(client.packages);
-                    return (
-                      <TableRow key={client.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Link href={`/clients/${client.id}`} className="font-medium hover:underline">
-                              {client.name}
-                            </Link>
-                            {hasRenewalRequest(client.packages) && (
-                              <Badge variant="outline" className="border-amber-500/60 text-amber-400">
-                                {t.clientsPage.renewalRequested}
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{client.phone}</TableCell>
-                        <TableCell>{label(client.section)}</TableCell>
-                        <TableCell>
-                          <Badge variant={STATUS_VARIANT[client.status]}>{label(client.status)}</Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {client.assignedTrainer?.name ?? t.clientsPage.unassigned}
-                        </TableCell>
-                        <TableCell>
-                          {remaining === null ? (
-                            <span className="text-muted-foreground">{t.clientsPage.noActivePackage}</span>
-                          ) : (
-                            <span className={remaining <= 2 ? "font-medium text-destructive" : ""}>
-                              {remaining}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {client.createdAt.toLocaleDateString()}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </>
-      )}
+      <ClientsList
+        clients={clients.map((client) => ({
+          id: client.id,
+          name: client.name,
+          phone: client.phone,
+          section: client.section,
+          status: client.status,
+          trainerName: client.assignedTrainer?.name ?? null,
+          remaining: remainingForClient(client.packages),
+          hasRenewalRequest: hasRenewalRequest(client.packages),
+          since: formatGymDate(client.createdAt, locale),
+        }))}
+        canBulkEdit={canReview}
+        t={t.clientsPage}
+        emptyText={t.clientsPage.noneMatch}
+      />
     </div>
   );
 }
