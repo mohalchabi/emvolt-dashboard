@@ -217,6 +217,17 @@ export const en = {
     couldNotConvert: "Could not convert lead.",
     couldNotAddNote: "Could not add note.",
   },
+  homeActions: {
+    goodMorning: "Good morning",
+    goodAfternoon: "Good afternoon",
+    goodEvening: "Good evening",
+    deskSubtitle: "Everything for the front desk, in one place.",
+    whatNext: "What would you like to do?",
+    addCustomer: "Add a customer",
+    addCustomerHint: "Someone who joined",
+    addLead: "Add a lead",
+    addLeadHint: "Someone still deciding",
+  },
   clientReview: {
     title: "Finished clients",
     subtitle: "Who has used everything they bought, and what still needs closing out before you can be sure.",
@@ -518,6 +529,7 @@ export const en = {
     packageTypes: "Package types",
     wallet: "Wallet",
     staff: "Staff",
+    myClockIns: "My clock-ins",
     help: "How to use",
   },
   attendance: {

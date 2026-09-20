@@ -8,6 +8,7 @@ import {
   BookOpen,
   Package,
   UserCog,
+  Fingerprint,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { PETTY_CASH_CATEGORY, isManagerRole, type StaffRole } from "@/lib/constants";
@@ -34,10 +35,17 @@ export async function StaffOverview({
   role,
   t,
   locale,
+  actions,
 }: {
   staffId: string;
   role: StaffRole;
   t: Dictionary;
+  /**
+   * Things to start, shown between clocking in and the boxes that go
+   * somewhere. Sits there because the order matches the day: clock in, then
+   * serve whoever is at the counter, then go looking.
+   */
+  actions?: React.ReactNode;
   locale: Locale;
 }) {
   const c = t.overview;
@@ -97,6 +105,8 @@ export async function StaffOverview({
         locale={locale}
       />
 
+      {actions}
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         {isTrainer && (
           <>
@@ -137,6 +147,7 @@ export async function StaffOverview({
               sublabel={c.today}
               icon={CalendarClock}
             />
+            <OverviewTile href="/attendance" label={c.myClockIns} icon={Fingerprint} tone="neutral" />
           </>
         )}
 

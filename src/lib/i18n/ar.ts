@@ -219,6 +219,17 @@ export const ar: Dictionary = {
     couldNotConvert: "تعذّر تحويل العميل المحتمل.",
     couldNotAddNote: "تعذّر إضافة الملاحظة.",
   },
+  homeActions: {
+    goodMorning: "صباح الخير",
+    goodAfternoon: "مساء الخير",
+    goodEvening: "مساء الخير",
+    deskSubtitle: "كل شي بتحتاجه ع الاستقبال بمكان واحد.",
+    whatNext: "شو بدك تعمل؟",
+    addCustomer: "إضافة عميل",
+    addCustomerHint: "شخص اشترك معنا",
+    addLead: "إضافة عميل محتمل",
+    addLeadHint: "شخص لسا بيفكر",
+  },
   clientReview: {
     title: "العملاء المنتهون",
     subtitle: "مين خلّص كل اللي اشتراه، وشو لسا ناقص إغلاق حتى نتأكد.",
@@ -517,6 +528,7 @@ export const ar: Dictionary = {
     packageTypes: "أنواع الباقات",
     wallet: "المحفظة",
     staff: "الموظفون",
+    myClockIns: "بصماتي",
     help: "كيف أستخدم اللوحة",
   },
   attendance: {

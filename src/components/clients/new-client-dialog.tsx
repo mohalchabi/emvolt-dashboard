@@ -40,9 +40,12 @@ import type { Dictionary } from "@/lib/i18n";
 export function NewClientDialog({
   trainers,
   t,
+  trigger,
 }: {
   trainers: Staff[];
   t: Dictionary["clientsPage"];
+  /** Replaces the default button, so a home-screen tile can open this. */
+  trigger?: React.ReactElement;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -74,7 +77,7 @@ export function NewClientDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button>{t.newClient}</Button>} />
+      <DialogTrigger render={trigger ?? <Button>{t.newClient}</Button>} />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t.newClient}</DialogTitle>
