@@ -84,6 +84,15 @@ export const LOST_REASONS = [
 ] as const;
 export type LostReason = (typeof LOST_REASONS)[number];
 
+/**
+ * Leads a person is expected to actually reach in a day.
+ *
+ * Distinct people, not attempts: ringing one lead five times is one lead. The
+ * figure is a floor rather than a quota, which is why reports show it as "x of
+ * 5" and flag only what falls under.
+ */
+export const DAILY_LEAD_TARGET = 5;
+
 export const CONTACT_METHODS = ["whatsapp", "sms", "call"] as const;
 export type ContactMethod = (typeof CONTACT_METHODS)[number];
 

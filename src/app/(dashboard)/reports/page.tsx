@@ -1,4 +1,5 @@
-import { Users2, Banknote, Repeat, Receipt, Target } from "lucide-react";
+import Link from "next/link";
+import { Users2, Banknote, Repeat, Receipt, Target, PhoneCall, FileText } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
 import { label, MANAGER_ROLES } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
@@ -7,6 +8,7 @@ import { getReportTotals, isReportPeriod, type ReportPeriod } from "@/lib/report
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { ReportPeriodSelect } from "@/components/reports/period-select";
+import { Button } from "@/components/ui/button";
 import { TrendChart } from "@/components/reports/trend-chart";
 import { BarChartCard } from "@/components/dashboard/bar-chart-card";
 
@@ -45,6 +47,17 @@ export default async function ReportsPage({
           <p className="text-sm text-muted-foreground">{c.subtitle}</p>
         </div>
         <ReportPeriodSelect current={period} t={c} />
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" render={<Link href={`/reports/leads?period=${period}`} />}>
+          <PhoneCall className="size-4" />
+          {t.leadActivity.title}
+        </Button>
+        <Button variant="outline" size="sm" render={<Link href="/reports/daily" />}>
+          <FileText className="size-4" />
+          {t.dailyReports.title}
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

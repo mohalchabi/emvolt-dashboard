@@ -1,4 +1,5 @@
 import { Users, CheckCircle2, XCircle, Ban, CalendarClock } from "lucide-react";
+import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth-helpers";
 import {
   getLeadFunnel,
@@ -26,6 +27,8 @@ import { RecentActivityCard } from "@/components/dashboard/recent-activity";
 import { TrainerHome } from "@/components/dashboard/trainer-home";
 import { FrontDeskHome } from "@/components/dashboard/front-desk-home";
 import { StaffOverview } from "@/components/dashboard/staff-overview";
+import { HomeGreeting } from "@/components/dashboard/home-greeting";
+import { HomeActions } from "@/components/dashboard/home-actions";
 
 export default async function DashboardHome() {
   const session = await requireSession();
@@ -58,15 +61,40 @@ export default async function DashboardHome() {
     );
   }
   if (session.user.role === "front_desk") {
+    // Front desk work standing up with someone in front of them, so the home
+    // screen leads with the two things they start rather than the lists they
+    // browse. The trainers and staff lists are loaded here so the dialogs can
+    // be opened straight from a tile.
+    const [trainers, assignableStaff] = await Promise.all([
+      prisma.staff.findMany({ where: { active: true, role: "trainer" }, orderBy: { name: "asc" } }),
+      prisma.staff.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+    ]);
+
     return (
       <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">
-            {t.frontDeskHome.welcome} {session.user.name}
-          </h1>
-          <p className="text-sm text-muted-foreground">{t.frontDeskHome.subtitle}</p>
-        </div>
-        {overview}
+        <HomeGreeting
+          name={session.user.name}
+          subtitle={t.homeActions.deskSubtitle}
+          t={t.homeActions}
+          locale={locale}
+        />
+        <StaffOverview
+          staffId={session.user.id}
+          role={session.user.role}
+          t={t}
+          locale={locale}
+          actions={
+            <div className="flex flex-col gap-2">
+              <h2 className="text-sm font-medium text-muted-foreground">{t.homeActions.whatNext}</h2>
+              <HomeActions
+                trainers={trainers}
+                staff={assignableStaff}
+                t={t}
+                locale={locale}
+              />
+            </div>
+          }
+        />
         <FrontDeskHome staffId={session.user.id} staffName={session.user.name} t={t} headless />
       </div>
     );

@@ -12,6 +12,7 @@ export type NavKey =
   | "packageTypes"
   | "reports"
   | "attendance"
+  | "myDay"
   | "wallet"
   | "pettyCash"
   | "myPettyCash"
@@ -35,6 +36,8 @@ export const NAV_ITEMS: NavItem[] = [
   // Everyone clocks themselves in and out, so this is the one nav item with
   // no role condition at all.
   { href: "/attendance", labelKey: "attendance", roles: ["admin", "trainer_manager", "trainer", "front_desk"] },
+  // The day they are expected to send to the group at the end of a shift.
+  { href: "/my-day", labelKey: "myDay", roles: ["trainer", "front_desk", "trainer_manager"] },
   // Revenue and signups. The manager sees this too: sales performance is the
   // number they are run against. The wallet ledger stays with the owner.
   { href: "/reports", labelKey: "reports", roles: ["admin", "trainer_manager"] },

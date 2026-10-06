@@ -41,10 +41,13 @@ export function NewLeadDialog({
   staff,
   t,
   locale,
+  trigger,
 }: {
   staff: Staff[];
   t: Dictionary["newLeadDialog"];
   locale: Locale;
+  /** Replaces the default button, so a home-screen tile can open this. */
+  trigger?: React.ReactElement;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -77,7 +80,7 @@ export function NewLeadDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button>{t.trigger}</Button>} />
+      <DialogTrigger render={trigger ?? <Button>{t.trigger}</Button>} />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t.title}</DialogTitle>

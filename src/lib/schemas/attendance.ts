@@ -14,5 +14,9 @@ export const clockEventSchema = z.object({
   accuracy: z.coerce.number().finite().min(0).optional().nullable(),
   departureReason: z.enum(DEPARTURE_REASONS).optional().nullable(),
   note: z.string().trim().max(300).optional().nullable(),
+  // Filed with the clock out, so the account of the day is written while the
+  // day is still in mind rather than reconstructed later.
+  remarks: z.string().trim().max(2000).optional().nullable(),
+  issues: z.string().trim().max(2000).optional().nullable(),
 });
 export type ClockEventInput = z.infer<typeof clockEventSchema>;
