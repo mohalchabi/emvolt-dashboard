@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -53,6 +54,8 @@ export function ClockCard({
   const [error, setError] = useState<string | null>(null);
   const [outOpen, setOutOpen] = useState(false);
   const [reason, setReason] = useState<string>(NORMAL_END);
+  const [remarks, setRemarks] = useState("");
+  const [issues, setIssues] = useState("");
   const router = useRouter();
 
   const busy = isPending || locating;
@@ -116,6 +119,8 @@ export function ClockCard({
       longitude: pos.coords.longitude,
       accuracy: pos.coords.accuracy ?? null,
       departureReason: departureReason as never,
+      // Only carried on the way out, where the day is being closed.
+      ...(kind === "out" ? { remarks, issues } : {}),
     };
 
     startTransition(async () => {
@@ -124,6 +129,8 @@ export function ClockCard({
         else await clockOut(payload);
         setOutOpen(false);
         setReason(NORMAL_END);
+        setRemarks("");
+        setIssues("");
         toast.success(kind === "in" ? t.clockedInOk : t.clockedOutOk);
         router.refresh();
       } catch (err) {
@@ -204,6 +211,29 @@ export function ClockCard({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="clock-out-remarks">{t.remarksLabel}</Label>
+            <Textarea
+              id="clock-out-remarks"
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              placeholder={t.remarksPlaceholder}
+              rows={3}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="clock-out-issues">{t.issuesLabel}</Label>
+            <Textarea
+              id="clock-out-issues"
+              value={issues}
+              onChange={(e) => setIssues(e.target.value)}
+              placeholder={t.issuesPlaceholder}
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">{t.reportHint}</p>
           </div>
 
           {error && (

@@ -130,3 +130,49 @@
     @apply font-sans;
   }
 }
+/*
+ * Printing, which is how a daily report becomes a PDF.
+ *
+ * The app is dark, and a dark page printed either wastes a cartridge or comes
+ * out as grey mush, so print gets plain black on white. The browser does the
+ * PDF, and crucially the Arabic: it shapes and orders the text correctly,
+ * which is what ruled out generating the file ourselves.
+ */
+@media print {
+  :root,
+  :root[data-theme="dark"] {
+    --background: #ffffff;
+    --foreground: #000000;
+    --card: #ffffff;
+    --card-foreground: #000000;
+    --muted: #f4f4f5;
+    --muted-foreground: #3f3f46;
+    --border: #d4d4d8;
+    --popover: #ffffff;
+    --popover-foreground: #000000;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  /* Chrome and the sidebar aren't part of the report. */
+  nav,
+  aside,
+  header,
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  /* Keep a class or a lead from being split across two pages. */
+  .rounded-lg,
+  .rounded-xl {
+    break-inside: avoid;
+  }
+}

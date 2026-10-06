@@ -29,6 +29,7 @@ model Staff {
   leadTarget Int? // admin-set target # of leads to work through (e.g. weekly); null = not set
   createdAt  DateTime @default(now())
 
+  dailyReports     DailyReport[]         @relation("DailyReportStaff")
   assignedLeads    Lead[]                @relation("LeadAssignedStaff")
   assignedClients  Client[]              @relation("ClientAssignedTrainer")
   sessions         Session[]             @relation("SessionTrainer")
@@ -440,6 +441,38 @@ model WalletAttachment {
 // concrete box and indoor GPS drifts by tens of metres, so refusing a clock-in
 // on distance would strand honest staff at the door. Whoever reviews the day
 // sees the coordinates and accuracy and judges for themselves.
+// What a trainer did in a day, filed as they clock out.
+//
+// The numbers it shows — classes taught, leads called — are not stored here.
+// They're derived from the sessions and contact attempts of that day whenever
+// the report is opened, so closing a class out late corrects the report
+// instead of leaving it wrong forever. What is stored is the part only the
+// person can supply: what happened, and what got in the way.
+model DailyReport {
+  id      String @id @default(cuid())
+  staffId String
+  staff   Staff  @relation("DailyReportStaff", fields: [staffId], references: [id])
+
+  /** Midnight at the gym on the day this covers. */
+  day DateTime
+
+  /** The shift as clocked, snapshotted when the report is filed. */
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  /** Their own account of the day. */
+  remarks String?
+  /** Anything that went wrong: a customer, the facility, equipment. */
+  issues String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One per person per day, so clocking out twice edits rather than duplicates.
+  @@unique([staffId, day])
+  @@index([day])
+}
+
 model ClockEvent {
   id      String   @id @default(cuid())
   staffId String

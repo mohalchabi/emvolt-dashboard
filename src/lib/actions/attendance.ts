@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { startOfGymDay, endOfGymDay } from "@/lib/time";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/auth-helpers";
 import { clockEventSchema, type ClockEventInput } from "@/lib/schemas/attendance";
@@ -48,6 +49,38 @@ async function recordClockEvent(kind: "in" | "out", input: ClockEventInput) {
       note: data.note || null,
     },
   });
+
+  // Clocking out is the moment the day is finished, so it is also the moment
+  // the report is filed. The shift times are snapshotted onto it; everything
+  // else it shows is derived when it is read.
+  if (kind === "out") {
+    const day = startOfGymDay(event.at);
+    const firstIn = await prisma.clockEvent.findFirst({
+      where: { staffId: session.user.id, kind: "in", at: { gte: day, lte: endOfGymDay(day) } },
+      orderBy: { at: "asc" },
+    });
+
+    await prisma.dailyReport.upsert({
+      where: { staffId_day: { staffId: session.user.id, day } },
+      // A second clock out in the same day updates the one report rather than
+      // failing or leaving two accounts of the same shift.
+      update: {
+        endedAt: event.at,
+        ...(data.remarks !== undefined ? { remarks: data.remarks || null } : {}),
+        ...(data.issues !== undefined ? { issues: data.issues || null } : {}),
+      },
+      create: {
+        staffId: session.user.id,
+        day,
+        startedAt: firstIn?.at ?? null,
+        endedAt: event.at,
+        remarks: data.remarks || null,
+        issues: data.issues || null,
+      },
+    });
+    revalidatePath("/my-day");
+    revalidatePath("/reports/daily");
+  }
 
   revalidatePath("/attendance");
   revalidatePath("/");
