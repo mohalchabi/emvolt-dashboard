@@ -84,7 +84,7 @@ export default async function DailyReportsPage({
                 <Button
                   variant="outline"
                   size="sm"
-                  render={<Link href={`/reports/daily/${d.staff.id}?day=${dayKey}`} />}
+                  nativeButton={false} render={<Link href={`/reports/daily/${d.staff.id}?day=${dayKey}`} />}
                 >
                   <FileText className="size-4" />
                   {c.open}
