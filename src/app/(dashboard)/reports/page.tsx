@@ -50,11 +50,11 @@ export default async function ReportsPage({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" render={<Link href={`/reports/leads?period=${period}`} />}>
+        <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/reports/leads?period=${period}`} />}>
           <PhoneCall className="size-4" />
           {t.leadActivity.title}
         </Button>
-        <Button variant="outline" size="sm" render={<Link href="/reports/daily" />}>
+        <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/reports/daily" />}>
           <FileText className="size-4" />
           {t.dailyReports.title}
         </Button>

@@ -39,20 +39,22 @@ export default async function MyDayPage({
   return (
     <div className="flex max-w-3xl flex-col gap-5">
       <div className="flex items-center gap-2 print:hidden">
-        <Button variant="outline" size="sm" render={<Link href={shift(-1)} />} aria-label={t.dailyReport.previousDay}>
+        <Button variant="outline" size="sm" nativeButton={false} render={<Link href={shift(-1)} />} aria-label={t.dailyReport.previousDay}>
           <ChevronLeft className="size-4 rtl:rotate-180" />
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={isToday}
-          render={isToday ? <span /> : <Link href={shift(1)} />}
-          aria-label={t.dailyReport.nextDay}
-        >
-          <ChevronRight className="size-4 rtl:rotate-180" />
-        </Button>
         {!isToday && (
-          <Button variant="ghost" size="sm" render={<Link href="/my-day" />}>
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={<Link href={shift(1)} />}
+            aria-label={t.dailyReport.nextDay}
+          >
+            <ChevronRight className="size-4 rtl:rotate-180" />
+          </Button>
+        )}
+        {!isToday && (
+          <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/my-day" />}>
             {t.dailyReport.today}
           </Button>
         )}

@@ -90,7 +90,7 @@ export default async function ClientsPage({
         </div>
         <div className="flex items-center gap-2">
           {canReview && needsReview > 0 && (
-            <Button variant="outline" render={<Link href="/clients/review" />}>
+            <Button variant="outline" nativeButton={false} render={<Link href="/clients/review" />}>
               {t.clientsPage.reviewFinished}
               <Badge variant="secondary" className="ms-1.5 tabular-nums">
                 {needsReview}
