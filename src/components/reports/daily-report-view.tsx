@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { label } from "@/lib/constants";
+import { label, DAILY_LEAD_TARGET } from "@/lib/constants";
 import { formatGymDate, formatGymTime } from "@/lib/time";
 import { formatWorked } from "@/lib/attendance-summary";
 import { ReportActions } from "@/components/reports/report-actions";
@@ -97,8 +97,15 @@ export function DailyReportView({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>{t.leads}</CardTitle>
-          <span className="text-sm text-muted-foreground tabular-nums">
-            {t.reachedCount.replace("{count}", String(day.leadsReached))}
+          <span className="flex items-center gap-2">
+            <span className="text-sm tabular-nums text-muted-foreground">
+              {t.ofTarget
+                .replace("{count}", String(day.leadsReached))
+                .replace("{target}", String(DAILY_LEAD_TARGET))}
+            </span>
+            <Badge variant={day.metTarget ? "default" : "outline"}>
+              {day.metTarget ? t.targetMet : t.targetMissed}
+            </Badge>
           </span>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -195,7 +202,9 @@ export function asPlainText(day: StaffDay, t: Dictionary["dailyReport"], locale:
   }
 
   lines.push("");
-  lines.push(`${t.leads}: ${day.leadsReached}`);
+  lines.push(
+    `${t.leads}: ${day.leadsReached}/${DAILY_LEAD_TARGET}${day.metTarget ? "" : ` (${t.targetMissed})`}`
+  );
   for (const c of day.contacts) {
     lines.push(`• ${c.leadName} — ${label(c.outcome, locale)}`);
   }

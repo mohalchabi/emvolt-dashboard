@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db";
 import { periodRange, type ReportPeriod } from "@/lib/report-periods";
+import { gymDayKey } from "@/lib/time";
+import { DAILY_LEAD_TARGET } from "@/lib/constants";
 
 /**
  * Who is working their leads, and who isn't.
@@ -22,9 +24,22 @@ export type LeadActivityRow = {
   lastContactAt: Date | null;
   /** Days in the period on which they logged at least one contact. */
   activeDays: number;
+  /** Of those, how many cleared the daily minimum. */
+  daysMetTarget: number;
 };
 
 const OPEN_LEAD_STATUSES = ["new", "contacted", "trial_scheduled", "trial_completed"];
+
+function countDaysMeetingTarget(attempts: { leadId: string; createdAt: Date }[]): number {
+  const leadsByDay = new Map<string, Set<string>>();
+  for (const a of attempts) {
+    const key = gymDayKey(a.createdAt);
+    const set = leadsByDay.get(key) ?? new Set<string>();
+    set.add(a.leadId);
+    leadsByDay.set(key, set);
+  }
+  return [...leadsByDay.values()].filter((s) => s.size >= DAILY_LEAD_TARGET).length;
+}
 
 export async function getLeadActivity(period: ReportPeriod): Promise<LeadActivityRow[]> {
   const { start, end } = periodRange(period);
@@ -87,7 +102,10 @@ export async function getLeadActivity(period: ReportPeriod): Promise<LeadActivit
         (latest, a) => (latest === null || a.createdAt > latest ? a.createdAt : latest),
         null
       ),
-      activeDays: new Set(mine.map((a) => a.createdAt.toISOString().slice(0, 10))).size,
+      activeDays: new Set(mine.map((a) => gymDayKey(a.createdAt))).size,
+      // Counted per day rather than over the period: five a day is the ask,
+      // and twenty in one Monday does not make the rest of the week fine.
+      daysMetTarget: countDaysMeetingTarget(mine),
     };
   });
 }

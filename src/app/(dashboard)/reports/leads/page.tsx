@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
-import { MANAGER_ROLES, label } from "@/lib/constants";
+import { MANAGER_ROLES, DAILY_LEAD_TARGET, label } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
 import { getLeadActivity } from "@/lib/lead-activity";
 import { isReportPeriod, type ReportPeriod } from "@/lib/report-periods";
@@ -50,6 +50,10 @@ export default async function LeadActivityPage({
       </div>
 
       <ReportPeriodSelect current={period} t={t.reports} />
+
+      <p className="text-xs text-muted-foreground">
+        {c.targetNote.replace("{target}", String(DAILY_LEAD_TARGET))}
+      </p>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Summary label={c.leadsReached} value={totalReached} />
@@ -109,6 +113,16 @@ export default async function LeadActivityPage({
                 <span>
                   {c.daysActive}{" "}
                   <bdi className="font-medium text-foreground tabular-nums">{row.activeDays}</bdi>
+                </span>
+                <span>
+                  {c.daysOnTarget}{" "}
+                  <bdi
+                    className={`font-medium tabular-nums ${
+                      row.daysMetTarget === 0 ? "text-destructive" : "text-foreground"
+                    }`}
+                  >
+                    {row.daysMetTarget}
+                  </bdi>
                 </span>
                 {row.lastContactAt && (
                   <span>

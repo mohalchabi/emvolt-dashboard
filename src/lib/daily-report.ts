@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { startOfGymDay, endOfGymDay, gymDayKey } from "@/lib/time";
+import { DAILY_LEAD_TARGET } from "@/lib/constants";
 
 /**
  * Everything that made up one person's working day.
@@ -46,6 +47,8 @@ export type StaffDay = {
   contacts: DayContact[];
   /** Distinct leads reached, which is what a target of "call 10" means. */
   leadsReached: number;
+  /** Whether the day cleared the daily minimum. */
+  metTarget: boolean;
   outcomeCounts: Record<string, number>;
 };
 
@@ -107,6 +110,7 @@ export async function getStaffDay(staffId: string, day: Date): Promise<StaffDay 
   const startedAt = report?.startedAt ?? firstIn;
   const endedAt = report?.endedAt ?? lastOut;
 
+  const reached = new Set(contacts.map((c) => c.leadId)).size;
   const outcomeCounts: Record<string, number> = {};
   for (const c of contacts) outcomeCounts[c.outcome] = (outcomeCounts[c.outcome] ?? 0) + 1;
 
@@ -139,7 +143,8 @@ export async function getStaffDay(staffId: string, day: Date): Promise<StaffDay 
       outcome: c.outcome,
       notes: c.notes,
     })),
-    leadsReached: new Set(contacts.map((c) => c.leadId)).size,
+    leadsReached: reached,
+    metTarget: reached >= DAILY_LEAD_TARGET,
     outcomeCounts,
   };
 }

@@ -239,6 +239,9 @@ export const en = {
     taughtOf: "{done} of {total} taught",
     noClasses: "No classes today.",
     leads: "Leads contacted",
+    ofTarget: "{count} of {target}",
+    targetMet: "Target met",
+    targetMissed: "Below target",
     reachedCount: "{count} reached",
     noLeads: "No leads contacted today.",
     remarks: "Notes",
@@ -269,6 +272,8 @@ export const en = {
     noneAtAll: "Called nobody",
     noneAtAllHint: "People holding leads with no contact in this period",
     calledNobody: "No calls this period",
+    daysOnTarget: "Days on target",
+    targetNote: "The daily minimum is {target} different leads reached.",
     untouched: "{count} never contacted",
   },
   dailyReports: {

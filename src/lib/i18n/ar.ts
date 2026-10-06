@@ -241,6 +241,9 @@ export const ar: Dictionary = {
     taughtOf: "{done} من {total} تمّت",
     noClasses: "لا توجد حصص اليوم.",
     leads: "العملاء المحتملون",
+    ofTarget: "{count} من {target}",
+    targetMet: "حقق الهدف",
+    targetMissed: "أقل من الهدف",
     reachedCount: "{count} تم التواصل معهم",
     noLeads: "لم يتم التواصل مع أحد اليوم.",
     remarks: "الملاحظات",
@@ -271,6 +274,8 @@ export const ar: Dictionary = {
     noneAtAll: "ما اتصلوا بحدا",
     noneAtAllHint: "موظفون معهم عملاء محتملون وما تواصلوا مع أحد بهذه الفترة",
     calledNobody: "لا اتصالات بهذه الفترة",
+    daysOnTarget: "أيام حقق فيها الهدف",
+    targetNote: "الحد الأدنى اليومي هو التواصل مع {target} عملاء محتملين مختلفين.",
     untouched: "{count} ما تم التواصل معهم أبداً",
   },
   dailyReports: {
