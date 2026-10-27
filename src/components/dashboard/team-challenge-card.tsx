@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { Sparkles, PartyPopper, Check, Circle } from "lucide-react";
+import { Zap, PartyPopper, Check, Gift, PhoneCall, CalendarCheck, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { TeamChallenge } from "@/lib/team-challenge";
 import type { Dictionary } from "@/lib/i18n";
 
@@ -57,6 +58,16 @@ function useAlreadyCelebrated(key: string): boolean {
 /**
  * The shared score, and the fuss when it is reached.
  *
+ * Built as a run of three stages rather than one bar, because one bar hid the
+ * thing that matters: the points come from three different activities worth
+ * wildly different amounts, and two of them carry a floor the points alone
+ * can't clear. Each stage shows its own ring, so a trainer can see at a glance
+ * which one is holding the voucher up.
+ *
+ * The bar underneath is stacked by where the points actually came from, which
+ * makes the lopsidedness visible — all the messaging in a month is a sliver
+ * next to a single sign-up, and that is exactly the lesson.
+ *
  * The celebration fires once per month per device and remembers that it has.
  * A popup that reappears on every page load stops being a celebration by the
  * third time and becomes something to click past.
@@ -84,79 +95,130 @@ export function TeamChallengeCard({
     }
   }
 
-  const pieces = CONFETTI;
+  const { breakdown } = challenge;
+  // Past the target the segments should still fill the track rather than
+  // overflow it, so the run is measured against whichever is larger.
+  const denominator = Math.max(challenge.points, challenge.target, 1);
+  const share = (points: number) => (points / denominator) * 100;
 
   return (
     <>
-      <Card className="overflow-hidden border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card">
-        <CardContent className="flex flex-col gap-3 p-4">
+      <Card
+        className={cn(
+          "overflow-hidden border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card",
+          challenge.reached && "border-emerald-500/50 from-emerald-500/15"
+        )}
+      >
+        <CardContent className="flex flex-col gap-4 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="flex items-center gap-2 font-medium">
-              <Sparkles className="size-4 text-primary" />
+              <Zap className="size-4 fill-primary text-primary" />
               {t.title}
             </span>
             <span className="text-xs text-muted-foreground">{monthLabel}</span>
           </div>
 
-          <div className="flex items-end justify-between gap-3">
-            <span className="text-2xl font-semibold tabular-nums">
-              {formatPoints(challenge.points)}
-              <span className="text-base font-normal text-muted-foreground">
-                {" / "}
-                {challenge.target}
-              </span>
-            </span>
-            <span className="text-end text-sm font-medium text-primary">{t.reward}</span>
-          </div>
-
-          <div
-            className="h-3 w-full overflow-hidden rounded-full bg-muted"
-            role="progressbar"
-            aria-valuenow={challenge.percent}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={t.title}
-          >
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-400 transition-[width] duration-700"
-              style={{ width: `${challenge.percent}%` }}
-            />
-          </div>
-
-          <p className="text-xs text-muted-foreground">{statusLine(challenge, t)}</p>
-
-          {/* The two things the points alone can't buy. Shown as their own
-              progress so a full bar that hasn't unlocked makes sense at a
-              glance, rather than looking like a fault. */}
-          <div className="flex flex-col gap-1.5 rounded-lg border border-border/60 bg-muted/30 p-2.5">
-            <Requirement
-              label={t.trials}
-              done={challenge.breakdown.trialsBooked}
-              need={challenge.minTrials}
-            />
-            <Requirement
-              label={t.conversions}
-              done={challenge.breakdown.conversions}
-              need={challenge.minConversions}
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span>
-              {t.contacts}{" "}
-              <bdi className="font-medium text-foreground tabular-nums">
-                {challenge.breakdown.contacts}
+          {/* Score on one side, the prize on the other, with the run between. */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="flex items-baseline gap-1.5">
+              <bdi className="font-heading text-3xl font-semibold tabular-nums">
+                {formatPoints(challenge.points)}
               </bdi>
-            </span>
-            {challenge.breakdown.contactPointsWithheld > 0 && (
-              <span className="text-amber-600 dark:text-amber-400">
-                {t.contactCapReached.replace(
-                  "{cap}",
-                  formatPoints(challenge.contactPointsCap)
-                )}
+              <span className="text-sm text-muted-foreground">
+                / {challenge.target} {t.pointsLabel}
               </span>
-            )}
+            </span>
+            <span
+              className={cn(
+                "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                challenge.reached
+                  ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                  : "border-border bg-muted/50 text-muted-foreground"
+              )}
+            >
+              <Gift className={cn("size-3.5", challenge.reached && "animate-bounce")} />
+              {t.reward}
+            </span>
           </div>
+
+          {/* Stacked by source, so a sliver of messaging next to a block of
+              sign-ups tells the story without a word of explanation. */}
+          <div className="flex items-center gap-2">
+            <div
+              className="flex h-3 flex-1 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuenow={challenge.percent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={t.title}
+            >
+              <Segment width={share(breakdown.contactPoints)} className="bg-sky-500" />
+              <Segment width={share(breakdown.trialPoints)} className="bg-cyan-400" />
+              <Segment width={share(breakdown.conversionPoints)} className="bg-emerald-500" />
+            </div>
+            <Trophy
+              className={cn(
+                "size-4 shrink-0 transition-colors",
+                challenge.reached ? "text-amber-400" : "text-muted-foreground/40"
+              )}
+            />
+          </div>
+
+          <p
+            className={cn(
+              "text-xs",
+              challenge.reached
+                ? "font-medium text-emerald-600 dark:text-emerald-400"
+                : "text-muted-foreground"
+            )}
+          >
+            {statusLine(challenge, t)}
+          </p>
+
+          {/* The three stages. Contacts has a ceiling rather than a floor, so
+              it is measured against the cap; the other two against what the
+              voucher actually demands. */}
+          <div className="grid grid-cols-3 gap-2">
+            <Stage
+              icon={<PhoneCall className="size-3.5" />}
+              label={t.contacts}
+              done={breakdown.contacts}
+              value={breakdown.contactPoints}
+              max={challenge.contactPointsCap}
+              tone="stroke-sky-500"
+              capped={breakdown.contactPointsWithheld > 0}
+              points={breakdown.contactPoints}
+              t={t}
+            />
+            <Stage
+              icon={<CalendarCheck className="size-3.5" />}
+              label={t.trials}
+              done={breakdown.trialsBooked}
+              need={challenge.minTrials}
+              value={breakdown.trialsBooked}
+              max={challenge.minTrials}
+              tone="stroke-cyan-400"
+              points={breakdown.trialPoints}
+              t={t}
+            />
+            <Stage
+              icon={<Trophy className="size-3.5" />}
+              label={t.conversions}
+              done={breakdown.conversions}
+              need={challenge.minConversions}
+              value={breakdown.conversions}
+              max={challenge.minConversions}
+              tone="stroke-emerald-500"
+              points={breakdown.conversionPoints}
+              t={t}
+            />
+          </div>
+
+          {breakdown.contactPointsWithheld > 0 && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              {t.contactCapReached.replace("{cap}", formatPoints(challenge.contactPointsCap))}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -167,7 +229,7 @@ export function TeamChallengeCard({
           aria-modal="true"
         >
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            {pieces.map((p, i) => (
+            {CONFETTI.map((p, i) => (
               <span
                 key={i}
                 className="absolute top-[-10%] block animate-confetti rounded-[1px]"
@@ -203,45 +265,116 @@ export function TeamChallengeCard({
   );
 }
 
+/** One source's slice of the track. Hidden entirely at zero so no seam shows. */
+function Segment({ width, className }: { width: number; className: string }) {
+  if (width <= 0) return null;
+  return (
+    <div
+      className={cn("h-full transition-[width] duration-700 first:rounded-s-full", className)}
+      style={{ width: `${width}%` }}
+    />
+  );
+}
+
 /**
- * One of the two conditions, with a tick once it is met.
+ * One of the three stages: a ring, the count, and what it is worth so far.
  *
- * The count is shown as "7 of 14" rather than as a percentage: these are
- * small whole numbers of real people, and a trainer reading "50%" learns
- * less than one reading that seven more will do it.
+ * Counts are shown as "7 / 14" rather than a percentage — these are small
+ * whole numbers of real people, and a trainer reading "50%" learns less than
+ * one reading that seven more will do it.
  */
-function Requirement({
+function Stage({
+  icon,
   label,
   done,
   need,
+  value,
+  max,
+  tone,
+  points,
+  capped,
+  t,
 }: {
+  icon: React.ReactNode;
   label: string;
   done: number;
-  need: number;
+  /** The floor this stage has to clear, when it has one. */
+  need?: number;
+  value: number;
+  max: number;
+  tone: string;
+  points: number;
+  capped?: boolean;
+  t: Dictionary["teamChallenge"];
 }) {
-  const met = done >= need;
+  const met = need === undefined ? Boolean(capped) : done >= need;
 
   return (
-    <div className="flex items-center justify-between gap-2 text-xs">
-      <span className="flex items-center gap-1.5">
+    <div className="flex flex-col items-center gap-1 rounded-xl border border-border/60 bg-muted/30 p-2.5 text-center">
+      <Ring value={value} max={max} tone={tone}>
         {met ? (
-          <Check className="size-3.5 text-emerald-500" />
+          <Check className="size-4 text-emerald-500" />
         ) : (
-          <Circle className="size-3.5 text-muted-foreground/50" />
+          <span className="text-muted-foreground">{icon}</span>
         )}
-        <span className={met ? "text-muted-foreground" : "text-foreground"}>{label}</span>
-      </span>
-      <bdi
-        className={`tabular-nums ${met ? "text-muted-foreground" : "font-medium text-foreground"}`}
-      >
-        {done} / {need}
+      </Ring>
+      <bdi className="text-sm font-semibold tabular-nums">
+        {need === undefined ? done : `${done} / ${need}`}
+      </bdi>
+      <span className="text-[11px] leading-tight text-muted-foreground">{label}</span>
+      <bdi className="text-[11px] tabular-nums text-muted-foreground/80">
+        {t.worthPoints.replace("{points}", formatPoints(points))}
       </bdi>
     </div>
   );
 }
 
+/** A progress ring with whatever belongs in the middle of it. */
+function Ring({
+  value,
+  max,
+  tone,
+  children,
+}: {
+  value: number;
+  max: number;
+  tone: string;
+  children: React.ReactNode;
+}) {
+  const radius = 20;
+  const circumference = 2 * Math.PI * radius;
+  const filled = max > 0 ? Math.min(1, value / max) : 0;
+
+  return (
+    <span className="relative inline-flex size-12 items-center justify-center">
+      <svg viewBox="0 0 48 48" className="absolute inset-0 size-12 -rotate-90">
+        <circle
+          cx="24"
+          cy="24"
+          r={radius}
+          fill="none"
+          strokeWidth="4"
+          className="stroke-border"
+        />
+        <circle
+          cx="24"
+          cy="24"
+          r={radius}
+          fill="none"
+          strokeWidth="4"
+          strokeLinecap="round"
+          className={cn(tone, "transition-[stroke-dashoffset] duration-700")}
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - filled)}
+        />
+      </svg>
+      <span className="relative flex items-center justify-center">{children}</span>
+    </span>
+  );
+}
+
 /**
- * What to say under the bar. There are three states, not two: the points can
+ * What to say under the run. There are three states, not two: the points can
  * be there while the trials or the sign-ups are not, and that case needs its
  * own sentence or the card reads as broken.
  */

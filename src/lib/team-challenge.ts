@@ -42,13 +42,21 @@ const ASSUMPTIONS = {
   /** Of those who come in, how many buy. */
   trialToPaidRate: 0.28,
   /**
-   * How much of the modelled trials and sales must actually happen, on top of
-   * the points total, before the reward unlocks. Set below one so an ordinary
+   * How many of the modelled trials must actually be booked, on top of the
+   * points total, before the reward unlocks. Set below one so an ordinary
    * month clears it; it exists to stop volume alone winning, not to make the
    * reward unreachable.
    */
-  minimumShare: 0.6,
+  minimumTrialShare: 0.6,
 } as const;
+
+/**
+ * Sales each trainer must personally be worth before the voucher unlocks,
+ * set by the studio rather than modelled. A flat per-head number is the point:
+ * it scales with the team and it cannot be diluted by one strong month from
+ * one person carrying everyone else.
+ */
+export const MIN_CONVERSIONS_PER_TRAINER = 3;
 
 export type TeamChallenge = {
   /** Points earned so far this month, after the cap on messaging. */
@@ -78,7 +86,7 @@ export type TeamChallenge = {
   contactPointsCap: number;
   /** Trials that must actually be booked, regardless of the points total. */
   minTrials: number;
-  /** Sales that must actually happen, regardless of the points total. */
+  /** Sales that must happen regardless of points: three per trainer. */
   minConversions: number;
   trainerCount: number;
   monthStart: Date;
@@ -142,8 +150,8 @@ export async function getTeamChallenge(now: Date = new Date()): Promise<TeamChal
   const points = contactPoints + trialPoints + conversionPoints;
 
   const target = monthlyTarget(trainerCount);
-  const minTrials = Math.max(1, Math.round(modelled.trials * ASSUMPTIONS.minimumShare));
-  const minConversions = Math.max(1, Math.round(modelled.conversions * ASSUMPTIONS.minimumShare));
+  const minTrials = Math.max(1, Math.round(modelled.trials * ASSUMPTIONS.minimumTrialShare));
+  const minConversions = Math.max(1, trainerCount) * MIN_CONVERSIONS_PER_TRAINER;
 
   const pointsReached = points >= target;
 

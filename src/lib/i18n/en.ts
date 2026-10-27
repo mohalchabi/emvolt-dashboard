@@ -251,6 +251,8 @@ export const en = {
     contacts: "Contacts",
     trials: "Trials booked",
     conversions: "Signed up",
+    pointsLabel: "points",
+    worthPoints: "{points} pts",
     celebrationTitle: "You did it!",
     celebrationBody: "The team hit this month's target together and unlocked the {reward}.",
     celebrationButton: "Lovely",

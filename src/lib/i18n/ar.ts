@@ -252,6 +252,8 @@ export const ar: Dictionary = {
     contacts: "تواصل",
     trials: "تجارب محجوزة",
     conversions: "اشتركوا",
+    pointsLabel: "نقطة",
+    worthPoints: "{points} نقطة",
     celebrationTitle: "مبروك!",
     celebrationBody: "الفريق وصل لهدف هذا الشهر مع بعض وفتح {reward}.",
     celebrationButton: "يسلمكن",
