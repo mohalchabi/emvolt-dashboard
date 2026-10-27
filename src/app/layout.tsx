@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/theme-provider";
 import { getLocale } from "@/lib/i18n";
 import "./globals.css";
 
@@ -35,14 +36,22 @@ export default async function RootLayout({
   const locale = await getLocale();
 
   return (
+    // `dark` stays on the server-rendered markup because it is the default, so
+    // the usual case paints correctly with no flash; next-themes' own blocking
+    // script swaps it before paint for anyone who chose light. That swap is a
+    // deliberate mismatch with what React rendered, hence the suppression —
+    // which covers this element's attributes only, not the tree below it.
     <html
       lang={locale}
       dir={locale === "ar" ? "rtl" : "ltr"}
       className={`dark ${inter.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        {children}
-        <Toaster />
+        <ThemeProvider>
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

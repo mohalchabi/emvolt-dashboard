@@ -38,32 +38,63 @@ export const POINTS = {
 const ASSUMPTIONS = {
   workingDaysPerMonth: 24,
   /** Of the leads reached, how many agree to come in. */
-  trialBookingRate: 0.12,
+  trialBookingRate: 0.1,
   /** Of those who come in, how many buy. */
-  trialToPaidRate: 0.3,
+  trialToPaidRate: 0.28,
+  /**
+   * How much of the modelled trials and sales must actually happen, on top of
+   * the points total, before the reward unlocks. Set below one so an ordinary
+   * month clears it; it exists to stop volume alone winning, not to make the
+   * reward unreachable.
+   */
+  minimumShare: 0.6,
 } as const;
 
 export type TeamChallenge = {
-  /** Points earned so far this month. */
+  /** Points earned so far this month, after the cap on messaging. */
   points: number;
   target: number;
   /** 0–100, capped, for the bar. */
   percent: number;
+  /** Every condition met: the points, the trials and the sales. */
   reached: boolean;
+  /** The points total alone, before the two conditions below. */
+  pointsReached: boolean;
   breakdown: {
     contacts: number;
     trialsBooked: number;
     conversions: number;
     contactPoints: number;
+    /** Points the cap withheld, so the limit can be shown rather than felt. */
+    contactPointsWithheld: number;
     trialPoints: number;
     conversionPoints: number;
   };
+  /**
+   * Reaching people is worth credit, but only so much of it. Past this, more
+   * messages add nothing — the rest of the goal has to be earned by getting
+   * people in and signing them up.
+   */
+  contactPointsCap: number;
+  /** Trials that must actually be booked, regardless of the points total. */
+  minTrials: number;
+  /** Sales that must actually happen, regardless of the points total. */
+  minConversions: number;
   trainerCount: number;
   monthStart: Date;
   monthEnd: Date;
-  /** What the next point would come from, for the nudge on the dashboard. */
+  /** Points still needed, once the cap is taken into account. */
   pointsToTarget: number;
 };
+
+/** What the month is modelled on, for the goal and the two minimums. */
+function model(trainerCount: number) {
+  const people = Math.max(1, trainerCount);
+  const contacts = people * DAILY_LEAD_TARGET * ASSUMPTIONS.workingDaysPerMonth;
+  const trials = contacts * ASSUMPTIONS.trialBookingRate;
+  const conversions = trials * ASSUMPTIONS.trialToPaidRate;
+  return { contacts, trials, conversions };
+}
 
 /**
  * The month's goal, scaled to how many people are working the list.
@@ -72,14 +103,9 @@ export type TeamChallenge = {
  * a formula, and floored so a single trainer still has something to aim at.
  */
 export function monthlyTarget(trainerCount: number): number {
-  const people = Math.max(1, trainerCount);
-  const contacts = people * DAILY_LEAD_TARGET * ASSUMPTIONS.workingDaysPerMonth;
-  const trials = contacts * ASSUMPTIONS.trialBookingRate;
-  const conversions = trials * ASSUMPTIONS.trialToPaidRate;
-
+  const { contacts, trials, conversions } = model(trainerCount);
   const raw =
     contacts * POINTS.contact + trials * POINTS.trialBooked + conversions * POINTS.conversion;
-
   return Math.max(250, Math.round(raw / 25) * 25);
 }
 
@@ -104,25 +130,42 @@ export async function getTeamChallenge(now: Date = new Date()): Promise<TeamChal
     }),
   ]);
 
-  const contactPoints = contacts * POINTS.contact;
+  const modelled = model(trainerCount);
+  // Doing the daily minimum every working day earns full credit for messaging.
+  // Beyond that it earns nothing, so a thousand messages can't buy the reward.
+  const contactPointsCap = modelled.contacts * POINTS.contact;
+  const earnedOnContacts = contacts * POINTS.contact;
+  const contactPoints = Math.min(earnedOnContacts, contactPointsCap);
+
   const trialPoints = trialsBooked * POINTS.trialBooked;
   const conversionPoints = conversions * POINTS.conversion;
   const points = contactPoints + trialPoints + conversionPoints;
+
   const target = monthlyTarget(trainerCount);
+  const minTrials = Math.max(1, Math.round(modelled.trials * ASSUMPTIONS.minimumShare));
+  const minConversions = Math.max(1, Math.round(modelled.conversions * ASSUMPTIONS.minimumShare));
+
+  const pointsReached = points >= target;
 
   return {
     points,
     target,
     percent: Math.min(100, Math.round((points / target) * 100)),
-    reached: points >= target,
+    // All three, so the reward always means people came in and people signed up.
+    reached: pointsReached && trialsBooked >= minTrials && conversions >= minConversions,
+    pointsReached,
     breakdown: {
       contacts,
       trialsBooked,
       conversions,
       contactPoints,
+      contactPointsWithheld: Math.max(0, earnedOnContacts - contactPoints),
       trialPoints,
       conversionPoints,
     },
+    contactPointsCap,
+    minTrials,
+    minConversions,
     trainerCount,
     monthStart,
     monthEnd,

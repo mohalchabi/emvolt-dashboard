@@ -50,7 +50,9 @@ export default function PortalLoginPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6 sm:p-10">
+    // Dark regardless of the chosen theme — the lockup is a white PNG and
+    // would vanish on a light background. See the staff login for the detail.
+    <div className="dark flex flex-1 flex-col items-center justify-center gap-6 bg-background p-6 text-foreground sm:p-10">
       <Image src="/logo-full-white.png" alt="EmVolt" width={640} height={629} className="h-32 w-auto sm:h-40" priority />
 
       <Card className="w-full max-w-sm">

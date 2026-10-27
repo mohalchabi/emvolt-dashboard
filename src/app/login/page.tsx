@@ -46,7 +46,11 @@ export default async function LoginPage({
   const { error } = await searchParams;
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6 sm:p-10">
+    // Sign-in stays on the brand's dark palette whichever theme is chosen
+    // inside the app: the lockup only exists as a white PNG, and on a light
+    // background it disappears. `dark` here redefines the palette variables
+    // for this subtree, so everything below it follows.
+    <div className="dark flex flex-1 flex-col items-center justify-center gap-6 bg-background p-6 text-foreground sm:p-10">
       <Image src="/logo-full-white.png" alt="EmVolt" width={640} height={629} className="h-32 w-auto sm:h-40" priority />
 
       <Card className="w-full max-w-sm">

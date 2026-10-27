@@ -25,7 +25,8 @@ export default async function DevLoginPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6 sm:p-10">
+    // Dark regardless of the chosen theme, to match the real login screens.
+    <div className="dark flex flex-1 flex-col items-center justify-center gap-6 bg-background p-6 text-foreground sm:p-10">
       <div className="flex flex-col items-center gap-3 text-center">
         <Image src="/logo-full-white.png" alt="EmVolt" width={640} height={629} className="h-32 w-auto sm:h-40" priority />
         <span className="font-heading text-base font-semibold tracking-tight text-muted-foreground sm:text-lg">

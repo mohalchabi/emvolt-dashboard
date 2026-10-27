@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { SidebarNav } from "@/components/nav/sidebar-nav";
 import { SignOutButton } from "@/components/nav/sign-out-button";
 import { LanguageToggle } from "@/components/nav/language-toggle";
+import { ThemeToggle } from "@/components/nav/theme-toggle";
 import { label } from "@/lib/constants";
 import type { NavItem } from "@/lib/nav";
 import type { Dictionary, Locale } from "@/lib/i18n";
@@ -105,6 +106,9 @@ export function AppShell({
             </div>
             <SidebarNav items={items} nav={t.nav} />
             <div className="mt-auto flex flex-col gap-3 border-t pt-4">
+              {/* The phone header has room for the language switch and the menu
+                  button and no more, so the theme lives in here. */}
+              <ThemeToggle t={t.common} />
               <UserSummary user={user} locale={locale} />
               <SignOutButton label={t.common.signOut} />
             </div>
@@ -119,6 +123,7 @@ export function AppShell({
         <SidebarNav items={items} nav={t.nav} />
         <div className="mt-auto flex flex-col gap-3 border-t pt-4">
           <LanguageToggle locale={locale} />
+          <ThemeToggle t={t.common} />
           <UserSummary user={user} locale={locale} />
           <SignOutButton label={t.common.signOut} />
         </div>
