@@ -16,6 +16,8 @@ import {
 } from "@/lib/kpi";
 import { label } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
+import { getTeamChallenge } from "@/lib/team-challenge";
+import { startOfGymDay, endOfGymDay, formatGymMonth } from "@/lib/time";
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { LeadFunnelCard } from "@/components/dashboard/lead-funnel";
 import { BarChartCard } from "@/components/dashboard/bar-chart-card";
@@ -27,6 +29,7 @@ import { RecentActivityCard } from "@/components/dashboard/recent-activity";
 import { TrainerHome } from "@/components/dashboard/trainer-home";
 import { FrontDeskHome } from "@/components/dashboard/front-desk-home";
 import { StaffOverview } from "@/components/dashboard/staff-overview";
+import { TeamChallengeCard } from "@/components/dashboard/team-challenge-card";
 import { HomeGreeting } from "@/components/dashboard/home-greeting";
 import { HomeActions } from "@/components/dashboard/home-actions";
 
@@ -41,6 +44,18 @@ export default async function DashboardHome() {
   );
 
   if (session.user.role === "trainer") {
+    // The shared score and today's tally, read fresh rather than stored, so
+    // the bar always agrees with the records behind it.
+    const [challenge, contactedToday] = await Promise.all([
+      getTeamChallenge(),
+      prisma.leadContactAttempt
+        .findMany({
+          where: { createdAt: { gte: startOfGymDay(), lte: endOfGymDay() } },
+          select: { leadId: true },
+        })
+        .then((rows) => new Set(rows.map((r) => r.leadId)).size),
+    ]);
+
     return (
       <div className="flex flex-col gap-6">
         <div>
@@ -49,6 +64,16 @@ export default async function DashboardHome() {
           </h1>
           <p className="text-sm text-muted-foreground">{t.trainerHome.subtitle}</p>
         </div>
+        <TeamChallengeCard
+          challenge={challenge}
+          monthLabel={formatGymMonth(challenge.monthStart, locale)}
+          t={t.teamChallenge}
+        />
+        <p className="-mt-3 text-xs text-muted-foreground">
+          {contactedToday > 0
+            ? t.teamChallenge.dailyNudge.replace("{count}", String(contactedToday))
+            : t.teamChallenge.dailyNudgeNone}
+        </p>
         {overview}
         <TrainerHome
           trainerId={session.user.id}

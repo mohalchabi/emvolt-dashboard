@@ -176,3 +176,36 @@
     break-inside: avoid;
   }
 }
+
+/*
+ * Confetti for the Team Challenge celebration.
+ *
+ * Plain CSS on a handful of spans rather than a canvas library: it is a few
+ * seconds of decoration once a month, which does not justify a dependency or
+ * the bytes it would add to every page load.
+ */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(680deg);
+    opacity: 0;
+  }
+}
+
+.animate-confetti {
+  animation-name: confetti-fall;
+  animation-timing-function: ease-in;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
+
+/* Anyone who has asked for less motion gets the celebration without the fall. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-confetti {
+    animation: none;
+    opacity: 0;
+  }
+}

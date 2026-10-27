@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/auth-helpers";
-import { label, LEAD_STATUSES } from "@/lib/constants";
+import { label, LEAD_STATUSES, DAILY_LEAD_TARGET } from "@/lib/constants";
+import { startOfGymDay, endOfGymDay } from "@/lib/time";
+import { QuickLogButtons, DailyLeadNudge } from "@/components/leads/quick-log";
 import { getDictionary } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +16,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { HelpTip } from "@/components/help/help-tip";
+
+// A lead already converted or written off has nothing left to quick-log.
+const OPEN_FOR_QUICK_LOG = ["new", "contacted", "trial_completed"];
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   new: "outline",
@@ -32,6 +37,17 @@ export default async function MyLeadsPage() {
     where: { assignedStaffId: session.user.id },
     orderBy: { createdAt: "desc" },
   });
+
+  const reachedToday = await prisma.leadContactAttempt
+    .findMany({
+      where: {
+        staffId: session.user.id,
+        createdAt: { gte: startOfGymDay(), lte: endOfGymDay() },
+      },
+      select: { leadId: true },
+    })
+    // Distinct people, matching how the target is counted everywhere else.
+    .then((rows) => new Set(rows.map((r) => r.leadId)).size);
 
   const counts = Object.fromEntries(
     LEAD_STATUSES.map((s) => [s, leads.filter((l) => l.status === s).length])
@@ -70,6 +86,12 @@ export default async function MyLeadsPage() {
         />
       </div>
 
+      <DailyLeadNudge
+        reachedToday={reachedToday}
+        target={DAILY_LEAD_TARGET}
+        t={t.myLeadsPage}
+      />
+
       {leads.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
@@ -81,20 +103,23 @@ export default async function MyLeadsPage() {
           {/* Mobile: stacked cards */}
           <div className="flex flex-col gap-2 sm:hidden">
             {leads.map((lead) => (
-              <Link
-                key={lead.id}
-                href={`/leads/${lead.id}`}
-                className="flex flex-col gap-1 rounded-lg border bg-card p-3 active:bg-accent"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{lead.name}</span>
-                  <Badge variant={STATUS_VARIANT[lead.status]}>{label(lead.status, locale)}</Badge>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {lead.phone} · {label(lead.source, locale)}
-                  {!lead.section && <span className="text-amber-400"> · {t.common.needsReview}</span>}
-                </div>
-              </Link>
+              <div key={lead.id} className="flex flex-col gap-2 rounded-lg border bg-card p-3">
+                <Link href={`/leads/${lead.id}`} className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">
+                      <bdi>{lead.name}</bdi>
+                    </span>
+                    <Badge variant={STATUS_VARIANT[lead.status]}>{label(lead.status, locale)}</Badge>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    <bdi>{lead.phone}</bdi> · {label(lead.source, locale)}
+                    {!lead.section && <span className="text-amber-400"> · {t.common.needsReview}</span>}
+                  </div>
+                </Link>
+                {OPEN_FOR_QUICK_LOG.includes(lead.status) && (
+                  <QuickLogButtons leadId={lead.id} method="whatsapp" t={t.myLeadsPage} />
+                )}
+              </div>
             ))}
           </div>
 

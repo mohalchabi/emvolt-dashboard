@@ -187,3 +187,12 @@ export function formatGymDate(at: Date, locale: string): string {
     timeZone: GYM_TIME_ZONE,
   }).format(at);
 }
+
+/** `October 2026` at the gym, for labelling a month's figures. */
+export function formatGymMonth(at: Date, locale: string): string {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
+    month: "long",
+    year: "numeric",
+    timeZone: GYM_TIME_ZONE,
+  }).format(at);
+}
